@@ -1104,8 +1104,10 @@ def drug_disparity(facility_id: str):
     if not facility_denom:
         raise HTTPException(404, f"no clinical denominator for {facility_id}")
 
-    # Pull the latest inventory snapshot from the log.
-    snapshots = list_inventory(facility_id=facility_id, limit=1)
+    # Pull the latest inventory snapshot from the log (plus the previous one
+    # for change detection — "+N vial since last month" on each tile).
+    snapshots = list_inventory(facility_id=facility_id, limit=2)
+    prev_snapshot = snapshots[1] if len(snapshots) >= 2 else None
     if not snapshots:
         # No live upload yet — use the staged fixture directly so the UI
         # has something to show on first paint. Prefer the LATEST dated
@@ -1125,6 +1127,12 @@ def drug_disparity(facility_id: str):
             return {"facility_id": facility_id, "tiles": [], "roll_up": None}
     else:
         snapshot = snapshots[0]
+
+    # Build prev-period qty map for change detection.
+    prev_qty = {}
+    if prev_snapshot:
+        for li in prev_snapshot.get("line_items", []):
+            prev_qty[li["drug"]] = li.get("qty", 0)
 
     tiles = []
     total_billed = 0.0
@@ -1172,10 +1180,15 @@ def drug_disparity(facility_id: str):
         search_name = re.split(r"\s+\d|\s+\(", raw_name, maxsplit=1)[0].strip()
         if not search_name:
             search_name = raw_name
+        prev_q = prev_qty.get(drug)
+        qty_delta = (qty - prev_q) if prev_q is not None else None
         tiles.append({
             "drug":                drug,
             "display_name":        raw_name,
             "search_name":         search_name,
+            "prev_qty":            prev_q,
+            "qty_delta":           qty_delta,
+            "is_new_vs_prev":      prev_q is not None and prev_q != qty,
             "unit":                rate_info.get("unit", "unit"),
             "ndc":                 rate_info.get("ndc"),
             "severity":            severity,
