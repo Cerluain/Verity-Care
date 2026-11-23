@@ -789,12 +789,19 @@ function dashboard() {
       } catch (_) {}
       try {
         this.facilities = await fetch('/facilities').then(r => r.json());
-        // Default-land on Mi Casa (the pitch demo facility) if present;
-        // otherwise fall back to the first facility.
         const preferred = this.facilities.find(f => f.id === 'mi-casa-life-care-az')
                         || this.facilities[0];
         if (preferred) this.select(preferred);
       } catch (e) { console.error(e); }
+      // When the investigator tab regains focus after a /facility upload in
+      // another tab, pull fresh snapshots + disparity + case-file history so
+      // the demo doesn't require a manual refresh.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || !this.selected) return;
+        this.loadSnapshotCards();
+        this.loadDrugDisparity();
+        this.loadCaseFileHistory();
+      });
     },
 
     async loadDrugDisparity() {
