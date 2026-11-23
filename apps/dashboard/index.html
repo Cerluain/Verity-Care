@@ -756,25 +756,24 @@ function dashboard() {
 
     async loadDrugDisparity() {
       if (!this.selected) return;
-      this.drug = { data: null, loading: true };
+      this.drug.loading = true;
       try {
         const id = this.selected.id;
-        const r = await fetch('/investigator/drug-disparity/' + encodeURIComponent(id));
+        const r = await fetch('/investigator/drug-disparity/' + encodeURIComponent(id) + '?_=' + Date.now(), {cache: 'no-store'});
         const j = r.ok ? await r.json() : null;
-        if (this.selected?.id === id) this.drug.data = j;
-      } catch(_) { this.drug.data = null; }
-      this.drug.loading = false;
+        if (this.selected?.id === id) this.drug = { data: j, loading: false };
+      } catch(_) { this.drug = { data: null, loading: false }; }
     },
 
     async loadSnapshotCards() {
       if (!this.selected) return;
       try {
         const id = this.selected.id;
-        const r = await fetch('/facility/inventory?facility_id=' + encodeURIComponent(id));
+        const r = await fetch('/facility/inventory?facility_id=' + encodeURIComponent(id) + '&_=' + Date.now(), {cache: 'no-store'});
         const rows = r.ok ? await r.json() : [];
         if (this.selected?.id !== id) return;
-        // Newest first → chronological left-to-right for the pitch narrative.
-        this.snapshotCards = rows.slice().sort((a,b) => (a.period||'').localeCompare(b.period||''));
+        // Force a fresh array reference so Alpine's shallow diff fires.
+        this.snapshotCards = [...rows].sort((a,b) => (a.period||'').localeCompare(b.period||''));
       } catch(_) { this.snapshotCards = []; }
     },
 
