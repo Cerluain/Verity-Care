@@ -1180,7 +1180,9 @@ function dashboard() {
 
         // 3. Ed25519 sign via apps/onchain /sign (routed by dashboard/main.py).
         //    We send the canonical JSON bytes base64-encoded.
-        const content_b64 = btoa(canon);
+        // UTF-8-safe base64: btoa() throws on chars outside Latin1 (em-dashes,
+        // check marks, etc. live inside the envelope JSON). Encode to bytes first.
+        const content_b64 = btoa(String.fromCharCode(...new TextEncoder().encode(canon)));
         const sig = await fetch('/sign', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
