@@ -1261,9 +1261,12 @@ function dashboard() {
       try {
         const r = await fetch('/chain/' + tx).then(r => r.json());
         if (r.verified && r.block_number && this.caseFile.anchor) {
-          this.caseFile.anchor.block_number = r.block_number;
-          this.caseFile.anchor.signer_role = r.signer_role || this.caseFile.anchor.signer_role;
-          this.caseFile.anchor.signer_address = r.signer_address || this.caseFile.anchor.signer_address;
+          this.caseFile.anchor = {
+            ...this.caseFile.anchor,
+            block_number: r.block_number,
+            signer_role: r.signer_role || this.caseFile.anchor.signer_role,
+            signer_address: r.signer_address || this.caseFile.anchor.signer_address,
+          };
         }
       } catch (e) {
         this.caseFile.error = 'verify failed: ' + String(e.message || e).slice(0, 180);
