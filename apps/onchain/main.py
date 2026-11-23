@@ -765,21 +765,24 @@ def list_deliveries(facility_id: Optional[str] = None, limit: int = 50):
 @app.post("/admin/reset-demo")
 def reset_demo(scope: str = "all"):
     """Wipe demo state. scope: 'deliveries' | 'commits' | 'all'.
-    This deletes the Postgres index AND rotates the JSONL log aside. Chain data
-    stays on Base Sepolia forever — we just stop surfacing it. Fresh uploads
-    recreate index rows and (if hashes change) new chain txs."""
+    This deletes the Postgres index AND rotates the JSONL logs aside (both
+    commit-log.jsonl and inventory-log.jsonl). Chain data stays on Base Sepolia
+    forever — we just stop surfacing it. Fresh uploads recreate index rows
+    and (if hashes change) new chain txs."""
     counts = {}
     try:
         counts = db.reset(scope)
     except Exception as e:
         raise HTTPException(500, f"db reset failed: {e}")
-    rotated = False
-    if scope in ("commits", "all") and LOG_FILE.exists():
-        backup = LOG_FILE.with_suffix(LOG_FILE.suffix + f".{int(datetime.now().timestamp())}.bak")
-        LOG_FILE.rename(backup)
-        LOG_FILE.touch()
-        rotated = True
-    return {"ok": True, "scope": scope, "db_deleted": counts, "jsonl_rotated": rotated}
+    rotated: list[str] = []
+    if scope in ("commits", "all"):
+        ts = int(datetime.now().timestamp())
+        for log in (LOG_FILE, LOG_FILE.parent / "inventory-log.jsonl"):
+            if log.exists():
+                log.rename(log.with_suffix(log.suffix + f".{ts}.bak"))
+                log.touch()
+                rotated.append(log.name)
+    return {"ok": True, "scope": scope, "db_deleted": counts, "rotated": rotated}
 
 
 @app.on_event("startup")
