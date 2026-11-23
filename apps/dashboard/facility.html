@@ -53,7 +53,7 @@
         </div>
       </div>
 
-      <form @submit.prevent="submit()" class="space-y-4">
+      <form @submit.prevent="onPrimary()" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <label class="flex flex-col text-xs text-slate-500">
             Facility
@@ -67,21 +67,15 @@
           </label>
         </div>
 
-        <!-- Photo picker with demo pre-fill -->
+        <!-- Step 1: pick a photo to parse -->
         <div class="border-2 border-dashed border-slate-300 rounded-lg p-5 text-sm">
           <div class="flex items-center justify-between mb-3">
             <div>
               <div class="font-medium text-slate-700">Receipt / cabinet photo</div>
               <div class="text-xs text-slate-500">JPG or PNG, up to 10 MB</div>
             </div>
-            <div class="flex gap-2">
-              <input type="file" accept="image/*" x-ref="file" @change="onFile()"
-                     class="text-xs text-slate-600">
-              <button type="button" @click="useDemoPhoto()"
-                      class="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-50">
-                use demo photo
-              </button>
-            </div>
+            <input type="file" accept="image/*" x-ref="file" @change="onFile()"
+                   class="text-xs text-slate-600">
           </div>
           <template x-if="preview">
             <img :src="preview" class="max-h-56 rounded border border-slate-200" alt="preview">
@@ -91,36 +85,69 @@
           </template>
         </div>
 
-        <!-- Fixture preview (what will be "parsed" and anchored) -->
-        <template x-if="fixture">
+        <!-- Step 2: parsed line items — editable BEFORE anchoring -->
+        <template x-if="parsed">
           <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 text-sm">
             <div class="flex items-center justify-between mb-2">
-              <div class="text-xs tracking-wider uppercase text-slate-500">parsed line items (preview)</div>
+              <div>
+                <div class="text-xs tracking-wider uppercase text-slate-500">parsed line items</div>
+                <div class="text-xs text-slate-500">edit any row before anchoring; receipt total recomputes live</div>
+              </div>
               <div class="text-xs text-slate-500">
-                invoice <span class="mono" x-text="fixture.invoice_ref"></span>
-                · supplier <span class="font-medium text-slate-700" x-text="fixture.supplier"></span>
+                invoice
+                <input x-model="parsed.invoice_ref"
+                       class="mono bg-white border border-slate-300 rounded px-1 py-0.5 w-32 text-xs">
+                · supplier
+                <input x-model="parsed.supplier"
+                       class="bg-white border border-slate-300 rounded px-1 py-0.5 w-40 text-xs">
               </div>
             </div>
             <table class="w-full text-xs">
               <thead class="text-slate-500">
-                <tr><th class="text-left py-1">drug</th><th class="text-right py-1">qty</th>
-                    <th class="text-right py-1">unit</th><th class="text-right py-1">total</th></tr>
+                <tr>
+                  <th class="text-left py-1">drug</th>
+                  <th class="text-right py-1">qty</th>
+                  <th class="text-right py-1">unit price</th>
+                  <th class="text-right py-1">line total</th>
+                  <th class="w-6"></th>
+                </tr>
               </thead>
               <tbody>
-                <template x-for="li in fixture.line_items" :key="li.drug">
+                <template x-for="(li, idx) in parsed.line_items" :key="idx">
                   <tr class="border-t border-slate-200">
-                    <td class="py-1 capitalize" x-text="li.drug.replace(/_/g,' ')"></td>
-                    <td class="text-right mono" x-text="li.qty"></td>
-                    <td class="text-right mono" x-text="'$' + li.unit_price.toFixed(2)"></td>
-                    <td class="text-right mono" x-text="'$' + li.total.toFixed(2)"></td>
+                    <td class="py-1 capitalize">
+                      <input x-model="li.drug"
+                             class="bg-white border border-slate-200 rounded px-1 py-0.5 text-xs w-40 capitalize">
+                    </td>
+                    <td class="text-right">
+                      <input type="number" step="1" min="0" x-model.number="li.qty"
+                             @input="recalc(li)"
+                             class="mono bg-white border border-slate-200 rounded px-1 py-0.5 text-xs w-20 text-right">
+                    </td>
+                    <td class="text-right">
+                      <input type="number" step="0.01" min="0" x-model.number="li.unit_price"
+                             @input="recalc(li)"
+                             class="mono bg-white border border-slate-200 rounded px-1 py-0.5 text-xs w-24 text-right">
+                    </td>
+                    <td class="text-right mono"
+                        x-text="'$' + (li.total || 0).toFixed(2)"></td>
+                    <td>
+                      <button type="button" @click="parsed.line_items.splice(idx, 1); recalcAll()"
+                              class="text-slate-400 hover:text-red-600" title="remove">✕</button>
+                    </td>
                   </tr>
                 </template>
                 <tr class="border-t-2 border-slate-300 font-semibold">
                   <td colspan="3" class="text-right py-1 pr-2">receipt total</td>
-                  <td class="text-right mono" x-text="'$' + (fixture.receipt_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></td>
+                  <td class="text-right mono" x-text="'$' + parsedTotal().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></td>
+                  <td></td>
                 </tr>
               </tbody>
             </table>
+            <button type="button" @click="addLineItem()"
+                    class="mt-2 text-xs text-slate-600 hover:text-slate-900 border border-slate-200 rounded px-2 py-1">
+              + add line item
+            </button>
           </div>
         </template>
 
@@ -128,9 +155,15 @@
           <template x-if="error">
             <div class="text-sm text-red-700" x-text="error"></div>
           </template>
-          <button type="submit" :disabled="uploading || !preview"
+          <template x-if="parsed">
+            <button type="button" @click="resetParse()"
+                    class="text-xs border border-slate-300 rounded px-3 py-2 hover:bg-slate-50">
+              start over
+            </button>
+          </template>
+          <button type="submit" :disabled="busy || !preview"
                   class="bg-slate-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:bg-slate-400">
-            <span x-text="uploading ? 'Pinning & anchoring…' : 'Sign & anchor snapshot on-chain'"></span>
+            <span x-text="primaryLabel()"></span>
           </button>
         </div>
       </form>
@@ -194,9 +227,9 @@ function facility() {
     chain: {ok: false, chain: '?'},
     period: new Date().toISOString().slice(0,7),
     form: { staff_pseudonym: 'FACILITY-ADMIN' },
-    preview: null,
-    fixture: null,
-    uploading: false,
+    preview: null,          // data URL for <img>
+    parsed: null,           // {line_items:[], invoice_ref, supplier} once "parse" click fires
+    busy: false,            // true during either parse or anchor
     error: null,
     snapshots: [],
 
@@ -217,17 +250,15 @@ function facility() {
 
     async onFacilityChange() {
       history.replaceState(null, '', '?facility=' + encodeURIComponent(this.selected));
-      this.preview = null;
-      this.error = null;
-      // Load fixture + snapshot history in parallel.
-      await Promise.all([this.loadFixture(), this.loadSnapshots()]);
+      this.resetParse();
+      await this.loadSnapshots();
     },
 
-    async loadFixture() {
-      try {
-        const r = await fetch('/facility/inventory/fixture-preview/' + encodeURIComponent(this.selected));
-        this.fixture = r.ok ? await r.json() : null;
-      } catch(_) { this.fixture = null; }
+    resetParse() {
+      this.preview = null;
+      this.parsed = null;
+      this.error = null;
+      if (this.$refs.file) this.$refs.file.value = '';
     },
 
     async loadSnapshots() {
@@ -235,9 +266,6 @@ function facility() {
         const r = await fetch('/facility/inventory?facility_id=' + encodeURIComponent(this.selected));
         const rows = r.ok ? await r.json() : [];
         this.snapshots = rows;
-        // Kick off a poller for every row that landed without a block number.
-        // Same bug class as SPEND cards: refresh must not require a fresh upload
-        // to display confirmed chain state.
         for (let i = 0; i < this.snapshots.length; i++) {
           const rec = this.snapshots[i];
           if (rec.tx_hash && !rec.block_number && !rec.mocked) this.pollTx(i);
@@ -247,59 +275,121 @@ function facility() {
 
     onFile() {
       const f = this.$refs.file.files[0];
+      // A fresh file invalidates any prior parse.
+      this.parsed = null;
+      this.error = null;
       if (!f) { this.preview = null; return; }
       const reader = new FileReader();
       reader.onload = e => this.preview = e.target.result;
       reader.readAsDataURL(f);
     },
 
-    async useDemoPhoto() {
-      // Fetch the demo receipt and inject as if the user picked it.
-      try {
-        const r = await fetch('/static-demo/inventory-sample-buffalo.jpg');
-        if (!r.ok) throw new Error('demo photo not available');
-        const blob = await r.blob();
-        this.preview = URL.createObjectURL(blob);
-        // Stuff it into the file input by DataTransfer so the submit uses it.
-        const dt = new DataTransfer();
-        dt.items.add(new File([blob], 'demo-receipt.jpg', {type: blob.type || 'image/jpeg'}));
-        this.$refs.file.files = dt.files;
-      } catch(e) {
-        this.error = 'could not load demo photo: ' + e.message;
-      }
+    // One button, two behaviors: first click → parse; second click → anchor.
+    async onPrimary() {
+      if (this.busy) return;
+      if (!this.parsed) await this.parse();
+      else              await this.commit();
     },
 
-    async submit() {
-      if (this.uploading) return;
-      const file = this.$refs.file.files[0];
+    primaryLabel() {
+      if (this.busy)    return this.parsed ? 'Pinning & anchoring…' : 'Parsing…';
+      if (!this.parsed) return 'Parse photo';
+      return 'Sign & anchor on-chain';
+    },
+
+    // Step 1: upload photo, hit the server's parse endpoint, render the result
+    // into an editable `parsed` object. NOTHING anchors here.
+    async parse() {
+      const file = this.$refs.file?.files[0];
       if (!file) { this.error = 'pick a photo first'; return; }
-      this.uploading = true;
+      this.busy = true;
       this.error = null;
       try {
         const fd = new FormData();
         fd.append('facility_id', this.selected);
-        fd.append('period', this.period);
-        fd.append('staff_pseudonym', this.form.staff_pseudonym);
         fd.append('image', file);
-        const r = await fetch('/facility/inventory/snapshot', { method:'POST', body: fd });
-        if (!r.ok) throw new Error('upload failed: ' + r.status);
-        const resp = await r.json();
-        // Prepend the new snapshot, kick off block-number polling.
-        this.snapshots.unshift(resp);
-        // Index 0 now. If still pending, poll via index so mutations hit the Alpine proxy.
-        if (!resp.block_number && !resp.mocked) this.pollTx(0);
-        this.preview = null;
-        this.$refs.file.value = '';
+        const r = await fetch('/facility/inventory/parse', { method:'POST', body: fd });
+        if (!r.ok) throw new Error('parse failed: ' + r.status);
+        const j = await r.json();
+        // Normalize into editable rows; ensure each has a numeric total.
+        const items = (j.line_items || []).map(li => ({
+          drug:       li.drug || '',
+          qty:        Number(li.qty) || 0,
+          unit_price: Number(li.unit_price) || 0,
+          total:      Number(li.total) || (Number(li.qty) * Number(li.unit_price)) || 0,
+        }));
+        this.parsed = {
+          invoice_ref: j.invoice_ref || '',
+          supplier:    j.supplier    || '',
+          line_items:  items,
+          // keep the photo CID server returned so commit() reuses it (one pin, not two).
+          image_cid:   j.image_cid,
+          image_sha256: j.image_sha256,
+          image_mime:  j.image_mime,
+        };
       } catch(e) {
         this.error = e.message || String(e);
       }
-      this.uploading = false;
+      this.busy = false;
+    },
+
+    // Step 2: operator-edited `parsed` → canonical envelope → IPFS → facility-signed chain commit.
+    async commit() {
+      if (!this.parsed) return;
+      this.busy = true;
+      this.error = null;
+      try {
+        // Normalize numbers and recompute totals one last time before hashing.
+        const line_items = this.parsed.line_items
+          .filter(li => li.drug && li.qty > 0 && li.unit_price >= 0)
+          .map(li => ({
+            drug:       String(li.drug).trim(),
+            qty:        Number(li.qty),
+            unit_price: Number(li.unit_price),
+            total:      +(Number(li.qty) * Number(li.unit_price)).toFixed(2),
+          }));
+        const body = {
+          facility_id:     this.selected,
+          period:          this.period,
+          staff_pseudonym: this.form.staff_pseudonym,
+          invoice_ref:     this.parsed.invoice_ref || '',
+          supplier:        this.parsed.supplier    || '',
+          line_items,
+          receipt_total:   +line_items.reduce((s, li) => s + li.total, 0).toFixed(2),
+          image_cid:       this.parsed.image_cid,
+          image_sha256:    this.parsed.image_sha256,
+          image_mime:      this.parsed.image_mime,
+        };
+        const r = await fetch('/facility/inventory/commit', {
+          method:'POST',
+          headers: {'content-type':'application/json'},
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error('anchor failed: ' + r.status);
+        const resp = await r.json();
+        this.snapshots.unshift(resp);
+        if (!resp.block_number && !resp.mocked) this.pollTx(0);
+        this.resetParse();
+      } catch(e) {
+        this.error = e.message || String(e);
+      }
+      this.busy = false;
+    },
+
+    // Editable-table helpers
+    recalc(li) {
+      li.total = +(Number(li.qty || 0) * Number(li.unit_price || 0)).toFixed(2);
+    },
+    recalcAll() { (this.parsed?.line_items || []).forEach(li => this.recalc(li)); },
+    parsedTotal() {
+      return (this.parsed?.line_items || []).reduce((s, li) => s + (Number(li.total) || 0), 0);
+    },
+    addLineItem() {
+      if (!this.parsed) return;
+      this.parsed.line_items.push({ drug: '', qty: 0, unit_price: 0, total: 0 });
     },
 
     pollTx(idx) {
-      // Poll by index into this.snapshots so we mutate the reactive proxy, not a
-      // detached reference. Grab tx_hash up front so an unshift of a newer row
-      // doesn't shift us onto the wrong tx.
       const tx = this.snapshots[idx]?.tx_hash;
       if (!tx || this.snapshots[idx]?.block_number) return;
       let tries = 0;
@@ -308,7 +398,6 @@ function facility() {
         try {
           const r = await fetch('/chain/' + tx).then(r=>r.json());
           if (r.verified && r.block_number) {
-            // Find the row by tx_hash (robust to reorderings from new uploads).
             const i = this.snapshots.findIndex(s => s.tx_hash === tx);
             if (i >= 0) this.snapshots[i].block_number = r.block_number;
             clearInterval(t);

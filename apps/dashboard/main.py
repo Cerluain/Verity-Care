@@ -194,6 +194,21 @@ def admin_reset(scope: str = "all"):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.post("/facility/inventory/parse")
+async def facility_parse(req: Request):
+    body = await req.body()
+    headers = {"content-type": req.headers.get("content-type", "application/octet-stream")}
+    r = _http.post(f"{ONCHAIN_SERVICE_URL}/facility/inventory/parse", content=body, headers=headers, timeout=60.0)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.post("/facility/inventory/commit")
+async def facility_commit(req: Request):
+    body = await req.json()
+    r = _http.post(f"{ONCHAIN_SERVICE_URL}/facility/inventory/commit", json=body, timeout=60.0)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.post("/facility/inventory/snapshot")
 async def facility_snapshot(req: Request):
     """Stream the multipart body through to the onchain service."""

@@ -822,16 +822,34 @@ def _load_fixture(facility_id: str) -> dict:
     return json.loads(p.read_text())
 
 
-@app.post("/facility/inventory/snapshot")
-async def facility_inventory_snapshot(
+class _LineItem(BaseModel):
+    drug: str
+    qty: float
+    unit_price: float
+    total: Optional[float] = None
+
+
+class InventoryCommitRequest(BaseModel):
+    facility_id: str
+    period: Optional[str] = None
+    staff_pseudonym: str = "FACILITY-ADMIN"
+    invoice_ref: str = ""
+    supplier: str = ""
+    line_items: list[_LineItem]
+    receipt_total: Optional[float] = None
+    image_cid: str
+    image_sha256: str
+    image_mime: str = "image/jpeg"
+
+
+@app.post("/facility/inventory/parse")
+async def facility_inventory_parse(
     facility_id: str = Form(...),
-    period: Optional[str] = Form(None),              # "2026-11", default = fixture's period
-    staff_pseudonym: str = Form("FACILITY-ADMIN"),   # whoever uploaded (usually operator)
     image: UploadFile = File(...),
 ):
-    """Facility operator uploads a monthly inventory receipt / cabinet photo.
-    Backend pins photo+parsed-JSON to IPFS, commits the envelope hash on-chain
-    under claim_type=6 (INVENTORY_SNAPSHOT), signed by the facility wallet."""
+    """STEP 1: pin the photo to IPFS and return the pre-staged fixture as if the
+    image had been OCR-parsed. No chain write, no envelope hash, no anchor.
+    Operator can now edit the returned line items freely before committing."""
     raw = await image.read()
     if not raw:
         raise HTTPException(400, "image is required")
@@ -839,63 +857,126 @@ async def facility_inventory_snapshot(
         raise HTTPException(413, "image too large (10 MB max)")
     image_sha = hashlib.sha256(raw).hexdigest()
     mime = image.content_type or "image/jpeg"
-
-    # Load the pre-staged fixture for this facility.
-    fx = _load_fixture(facility_id)
-    period_val = period or fx.get("period") or datetime.now().strftime("%Y-%m")
-
     image_cid = _pinata_upload_file(f"{facility_id}-inv.jpg", raw, mime)
-    pin_mode = "pinata" if PINATA_JWT else "mock"
+
+    fx = _load_fixture(facility_id)   # pretend OCR output
+    return {
+        "image_cid":    image_cid,
+        "image_sha256": image_sha,
+        "image_mime":   mime,
+        "image_url":    f"{PINATA_GATEWAY}{image_cid}",
+        "pin_mode":     "pinata" if PINATA_JWT else "mock",
+        "invoice_ref":  fx.get("invoice_ref"),
+        "supplier":     fx.get("supplier"),
+        "line_items":   fx.get("line_items", []),
+        "receipt_total": fx.get("receipt_total"),
+        "inventory_snapshots": fx.get("inventory_snapshots", {}),
+        "facility_id":  facility_id,
+        "facility_name": fx.get("facility_name"),
+    }
+
+
+@app.post("/facility/inventory/commit")
+async def facility_inventory_commit(req: InventoryCommitRequest):
+    """STEP 2: operator-edited line items → canonical envelope → pin → chain
+    commit under claim_type=6 (INVENTORY_SNAPSHOT), facility wallet signs.
+    Reuses the image_cid returned by /parse so we don't double-pin the photo."""
+    period_val = req.period or datetime.now().strftime("%Y-%m")
+    fx = None
+    try:
+        fx = _load_fixture(req.facility_id)
+    except HTTPException:
+        pass  # anchoring a facility with no staged fixture is fine
+
+    # Normalize line items + totals.
+    items: list[dict] = []
+    for li in req.line_items:
+        total = li.total if li.total is not None else round(li.qty * li.unit_price, 2)
+        items.append({"drug": li.drug.strip(), "qty": li.qty,
+                       "unit_price": li.unit_price, "total": round(total, 2)})
+    receipt_total = req.receipt_total if req.receipt_total is not None \
+        else round(sum(x["total"] for x in items), 2)
 
     envelope = {
         "schema":            "verity-care/inventory-snapshot/v1",
-        "facility_id":       facility_id,
-        "facility_name":     fx.get("facility_name"),
+        "facility_id":       req.facility_id,
+        "facility_name":     (fx or {}).get("facility_name"),
         "period":            period_val,
-        "invoice_ref":       fx.get("invoice_ref"),
-        "supplier":          fx.get("supplier"),
-        "line_items":        fx.get("line_items", []),
-        "inventory_snapshots": fx.get("inventory_snapshots", {}),
-        "receipt_total":     fx.get("receipt_total"),
+        "invoice_ref":       req.invoice_ref,
+        "supplier":          req.supplier,
+        "line_items":        items,
+        "inventory_snapshots": (fx or {}).get("inventory_snapshots", {}),
+        "receipt_total":     receipt_total,
         "image": {
-            "cid":    image_cid,
-            "sha256": image_sha,
-            "mime":   mime,
-            "size":   len(raw),
+            "cid":    req.image_cid,
+            "sha256": req.image_sha256,
+            "mime":   req.image_mime,
         },
-        "uploaded_by":       staff_pseudonym,
+        "uploaded_by":       req.staff_pseudonym,
         "uploaded_at":       datetime.now(timezone.utc).isoformat(),
     }
-    metadata_cid = _pinata_upload_json(envelope, f"verity-inventory-{facility_id}-{period_val}")
+    metadata_cid = _pinata_upload_json(envelope, f"verity-inventory-{req.facility_id}-{period_val}")
     claim_hash = "0x" + hashlib.sha256(_canonical_json(envelope)).hexdigest()
 
-    # Commit on-chain via the normal path (facility signer for claim_type=6).
     commit_resp = commit(CommitRequest(claim_type=6, claim_hash=claim_hash))
-    # commit_resp is a CommitResponse (pydantic model); normalize to dict.
     base = commit_resp.model_dump() if hasattr(commit_resp, "model_dump") else dict(commit_resp)
-    # Enrich the DB row + JSONL so /facility/inventory can reconstruct the full picture.
+
+    pin_mode = "pinata" if PINATA_JWT else "mock"
     extras = {
-        "facility_id":      facility_id,
-        "period":           period_val,
-        "image_cid":        image_cid,
-        "image_url":        f"{PINATA_GATEWAY}{image_cid}",
-        "image_sha256":     image_sha,
-        "image_mime":       mime,
-        "metadata_cid":     metadata_cid,
-        "metadata_url":     f"{PINATA_GATEWAY}{metadata_cid}",
-        "pin_mode":         pin_mode,
-        "receipt_total":    fx.get("receipt_total"),
-        "invoice_ref":      fx.get("invoice_ref"),
-        "supplier":         fx.get("supplier"),
-        "line_items":       fx.get("line_items", []),
-        "inventory_snapshots": fx.get("inventory_snapshots", {}),
+        "facility_id":         req.facility_id,
+        "period":              period_val,
+        "image_cid":           req.image_cid,
+        "image_url":           f"{PINATA_GATEWAY}{req.image_cid}",
+        "image_sha256":        req.image_sha256,
+        "image_mime":          req.image_mime,
+        "metadata_cid":        metadata_cid,
+        "metadata_url":        f"{PINATA_GATEWAY}{metadata_cid}",
+        "pin_mode":            pin_mode,
+        "receipt_total":       receipt_total,
+        "invoice_ref":         req.invoice_ref,
+        "supplier":            req.supplier,
+        "line_items":          items,
+        "inventory_snapshots": (fx or {}).get("inventory_snapshots", {}),
+        "edited_by_operator":  True,
     }
-    # Persist a facility-side mirror (for list/drilldown) into the inventory log.
     inv_log = LOG_FILE.parent / "inventory-log.jsonl"
     with inv_log.open("a") as f:
         f.write(json.dumps({**base, **extras}) + "\n")
-
     return {**base, **extras}
+
+
+@app.post("/facility/inventory/snapshot")
+async def facility_inventory_snapshot(
+    facility_id: str = Form(...),
+    period: Optional[str] = Form(None),
+    staff_pseudonym: str = Form("FACILITY-ADMIN"),
+    image: UploadFile = File(...),
+):
+    """Legacy one-shot: parse + commit in a single POST. Kept for script/seed use
+    (e.g. automated backfill of historical snapshots). The UI uses the two-step
+    /parse → /commit flow so operators can edit before signing."""
+    raw = await image.read()
+    if not raw:
+        raise HTTPException(400, "image is required")
+    if len(raw) > 10_000_000:
+        raise HTTPException(413, "image too large (10 MB max)")
+    image_sha = hashlib.sha256(raw).hexdigest()
+    mime = image.content_type or "image/jpeg"
+    fx = _load_fixture(facility_id)
+    image_cid = _pinata_upload_file(f"{facility_id}-inv.jpg", raw, mime)
+    req = InventoryCommitRequest(
+        facility_id=facility_id,
+        period=period or fx.get("period"),
+        staff_pseudonym=staff_pseudonym,
+        invoice_ref=fx.get("invoice_ref", ""),
+        supplier=fx.get("supplier", ""),
+        line_items=[_LineItem(**li) for li in fx.get("line_items", [])],
+        receipt_total=fx.get("receipt_total"),
+        image_cid=image_cid,
+        image_sha256=image_sha,
+        image_mime=mime,
+    )
+    return await facility_inventory_commit(req)
 
 
 @app.get("/facility/inventory")
