@@ -8,8 +8,10 @@ pragma solidity ^0.8.24;
 ///           2 (VOICE)            - a resident voice attestation, anchored at end-of-call.
 ///           3 (CASEFILE)         - a final MFCU referral packet, anchored at export time.
 ///           4 (SIGNAL_CARD)      - a per-signal computation result, anchored at compute time.
-///           5 (PROOF_OF_SERVICE) - a staff-delivered service event (meal, dose, visit) with
-///                                  photo + metadata CID on IPFS, anchored at delivery time.
+///           5 (PROOF_OF_SERVICE)   - a staff-delivered service event (meal, dose, visit) with
+///                                    photo + metadata CID on IPFS, anchored at delivery time.
+///           6 (INVENTORY_SNAPSHOT) - a facility-signed drug/supply cabinet snapshot, parsed
+///                                    line items pinned to IPFS, anchored at upload time.
 ///         Only hashes are stored; preimages stay off-chain. No PHI ever touches this contract.
 contract VerityCommit {
     uint8 public constant CLAIM_TAP = 1;
@@ -17,6 +19,7 @@ contract VerityCommit {
     uint8 public constant CLAIM_CASEFILE = 3;
     uint8 public constant CLAIM_SIGNAL_CARD = 4;
     uint8 public constant CLAIM_PROOF_OF_SERVICE = 5;
+    uint8 public constant CLAIM_INVENTORY_SNAPSHOT = 6;
 
     /// @notice Emitted on every commit. Index all three main fields for cheap querying.
     event Committed(
@@ -32,7 +35,7 @@ contract VerityCommit {
     /// @param claimType One of CLAIM_* constants above.
     /// @param claimHash Opaque 32-byte digest of the off-chain preimage.
     function commit(uint8 claimType, bytes32 claimHash) external {
-        require(claimType >= 1 && claimType <= 5, "VerityCommit: unknown claim type");
+        require(claimType >= 1 && claimType <= 6, "VerityCommit: unknown claim type");
         require(claimHash != bytes32(0), "VerityCommit: empty hash");
         emit Committed(claimType, claimHash, msg.sender, uint64(block.timestamp));
     }

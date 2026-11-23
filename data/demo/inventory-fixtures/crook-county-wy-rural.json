@@ -1,0 +1,19 @@
+{
+  "facility_id":    "crook-county-wy-rural",
+  "facility_name":  "Crook County Medical Services District",
+  "period":         "2026-11",
+  "invoice_ref":    "INV-CRK-0188",
+  "supplier":       "Rocky Mountain Medical Supply (rural tier)",
+  "line_items": [
+    {"drug": "insulin_lispro", "qty": 16,  "unit_price":  36.50, "total":   584.00},
+    {"drug": "metformin",      "qty": 1,   "unit_price":  58.40, "total":    58.40},
+    {"drug": "atorvastatin",   "qty": 2,   "unit_price":  22.10, "total":    44.20},
+    {"drug": "lisinopril",     "qty": 1,   "unit_price":  17.10, "total":    17.10},
+    {"drug": "levothyroxine",  "qty": 1,   "unit_price":  63.20, "total":    63.20}
+  ],
+  "receipt_total": 766.90,
+  "inventory_snapshots": {
+    "start_of_month": {"insulin_lispro": 10, "metformin": 2, "atorvastatin": 3, "lisinopril": 2, "levothyroxine": 2},
+    "end_of_month":   {"insulin_lispro":  5, "metformin": 1, "atorvastatin": 2, "lisinopril": 1, "levothyroxine": 1}
+  }
+}

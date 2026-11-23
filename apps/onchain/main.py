@@ -48,7 +48,8 @@ PINATA_GATEWAY = os.getenv("PINATA_GATEWAY", "https://gateway.pinata.cloud/ipfs/
 LOG_FILE = Path(os.getenv("LOG_FILE", "./data/commit-log.jsonl"))
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-CLAIM_TYPES = {1: "tap", 2: "voice", 3: "casefile", 4: "signal_card", 5: "proof_of_service"}
+CLAIM_TYPES = {1: "tap", 2: "voice", 3: "casefile", 4: "signal_card", 5: "proof_of_service",
+               6: "inventory_snapshot"}
 
 # claim_type -> which signer role signs it
 SIGNER_ROLE = {
@@ -57,6 +58,7 @@ SIGNER_ROLE = {
     3: "verity_service",  # CASEFILE
     4: "facility",        # SIGNAL_CARD — facility uploaded the data, so facility signs
     5: "staff",           # PROOF_OF_SERVICE — individual staff member delivered the service
+    6: "facility",        # INVENTORY_SNAPSHOT — facility operator attests to cabinet contents
 }
 
 # Pre-computed event signature hash for Committed(uint8,bytes32,address,uint64).
@@ -120,7 +122,7 @@ app = FastAPI(title="Verity Care — on-chain service")
 
 
 class CommitRequest(BaseModel):
-    claim_type: int = Field(..., ge=1, le=5)
+    claim_type: int = Field(..., ge=1, le=6)
     claim_hash: str = Field(..., description="0x-prefixed 32-byte hex")
 
 
@@ -786,4 +788,271 @@ def _startup():
         db.init()
     except Exception as e:
         print(f"[onchain] db.init failed; continuing in JSONL-only mode. reason: {e}")
+
+
+# ============================================================================
+# FACILITY: inventory snapshot pillar (claim_type=6, facility wallet signs)
+#
+# One POST = one monthly inventory attestation. Upload flow:
+#   1. receive photo + facility_id
+#   2. pin photo to IPFS (Pinata) → image_cid
+#   3. load the pre-staged fixture JSON for this facility
+#      (data/demo/inventory-fixtures/<facility_id>.json) — treat as "parsed"
+#   4. build a canonical snapshot envelope: {facility_id, period, image_cid,
+#      image_sha256, line_items, inventory_snapshots, computed_at}
+#   5. pin envelope to IPFS → metadata_cid
+#   6. sha256(canonical envelope) → claim_hash → commit(claim_type=6)
+#   7. return tx_hash + Basescan + IPFS links
+# ============================================================================
+
+# Data roots (relative to repo root). The onchain service runs from apps/onchain,
+# so climb two levels.
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+CLINICAL_DIR = _REPO_ROOT / "data" / "clinical"
+FIXTURES_DIR = _REPO_ROOT / "data" / "demo" / "inventory-fixtures"
+
+
+def _load_fixture(facility_id: str) -> dict:
+    p = FIXTURES_DIR / f"{facility_id}.json"
+    if not p.exists():
+        raise HTTPException(404, f"no inventory fixture staged for {facility_id}")
+    return json.loads(p.read_text())
+
+
+@app.post("/facility/inventory/snapshot")
+async def facility_inventory_snapshot(
+    facility_id: str = Form(...),
+    period: Optional[str] = Form(None),              # "2026-11", default = fixture's period
+    staff_pseudonym: str = Form("FACILITY-ADMIN"),   # whoever uploaded (usually operator)
+    image: UploadFile = File(...),
+):
+    """Facility operator uploads a monthly inventory receipt / cabinet photo.
+    Backend pins photo+parsed-JSON to IPFS, commits the envelope hash on-chain
+    under claim_type=6 (INVENTORY_SNAPSHOT), signed by the facility wallet."""
+    raw = await image.read()
+    if not raw:
+        raise HTTPException(400, "image is required")
+    if len(raw) > 10_000_000:
+        raise HTTPException(413, "image too large (10 MB max)")
+    image_sha = hashlib.sha256(raw).hexdigest()
+    mime = image.content_type or "image/jpeg"
+
+    # Load the pre-staged fixture for this facility.
+    fx = _load_fixture(facility_id)
+    period_val = period or fx.get("period") or datetime.now().strftime("%Y-%m")
+
+    image_cid = _pinata_upload_file(f"{facility_id}-inv.jpg", raw, mime)
+    pin_mode = "pinata" if PINATA_JWT else "mock"
+
+    envelope = {
+        "schema":            "verity-care/inventory-snapshot/v1",
+        "facility_id":       facility_id,
+        "facility_name":     fx.get("facility_name"),
+        "period":            period_val,
+        "invoice_ref":       fx.get("invoice_ref"),
+        "supplier":          fx.get("supplier"),
+        "line_items":        fx.get("line_items", []),
+        "inventory_snapshots": fx.get("inventory_snapshots", {}),
+        "receipt_total":     fx.get("receipt_total"),
+        "image": {
+            "cid":    image_cid,
+            "sha256": image_sha,
+            "mime":   mime,
+            "size":   len(raw),
+        },
+        "uploaded_by":       staff_pseudonym,
+        "uploaded_at":       datetime.now(timezone.utc).isoformat(),
+    }
+    metadata_cid = _pinata_upload_json(envelope, f"verity-inventory-{facility_id}-{period_val}")
+    claim_hash = "0x" + hashlib.sha256(_canonical_json(envelope)).hexdigest()
+
+    # Commit on-chain via the normal path (facility signer for claim_type=6).
+    commit_resp = commit(CommitRequest(claim_type=6, claim_hash=claim_hash))
+    # commit_resp is a CommitResponse (pydantic model); normalize to dict.
+    base = commit_resp.model_dump() if hasattr(commit_resp, "model_dump") else dict(commit_resp)
+    # Enrich the DB row + JSONL so /facility/inventory can reconstruct the full picture.
+    extras = {
+        "facility_id":      facility_id,
+        "period":           period_val,
+        "image_cid":        image_cid,
+        "image_url":        f"{PINATA_GATEWAY}{image_cid}",
+        "image_sha256":     image_sha,
+        "image_mime":       mime,
+        "metadata_cid":     metadata_cid,
+        "metadata_url":     f"{PINATA_GATEWAY}{metadata_cid}",
+        "pin_mode":         pin_mode,
+        "receipt_total":    fx.get("receipt_total"),
+        "invoice_ref":      fx.get("invoice_ref"),
+        "supplier":         fx.get("supplier"),
+        "line_items":       fx.get("line_items", []),
+        "inventory_snapshots": fx.get("inventory_snapshots", {}),
+    }
+    # Persist a facility-side mirror (for list/drilldown) into the inventory log.
+    inv_log = LOG_FILE.parent / "inventory-log.jsonl"
+    with inv_log.open("a") as f:
+        f.write(json.dumps({**base, **extras}) + "\n")
+
+    return {**base, **extras}
+
+
+@app.get("/facility/inventory")
+def list_inventory(facility_id: Optional[str] = None, limit: int = 20):
+    """Return inventory snapshots. Prefer the local inventory log (already
+    enriched with line items + CIDs); each row includes full on-chain metadata."""
+    inv_log = LOG_FILE.parent / "inventory-log.jsonl"
+    rows: list[dict] = []
+    if inv_log.exists():
+        with inv_log.open() as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if facility_id and r.get("facility_id") != facility_id:
+                    continue
+                rows.append(r)
+    # Chain-backfill block_number for any still-pending tx
+    if not MOCK and _w3 is not None:
+        for row in rows:
+            if row.get("block_number") or row.get("mocked"):
+                continue
+            tx = row.get("tx_hash")
+            if not tx:
+                continue
+            try:
+                receipt = _w3.eth.get_transaction_receipt(tx)
+            except Exception:
+                continue
+            event = _event_from_receipt(receipt, tx)
+            if event and event.get("block_number"):
+                row["block_number"] = event["block_number"]
+    rows.reverse()  # newest first
+    return rows[:limit]
+
+
+@app.get("/investigator/drug-disparity/{facility_id}")
+def drug_disparity(facility_id: str):
+    """Compute the investigator-facing drug-level disparity view for one facility.
+    Returns per-drug tiles comparing clinically-expected consumption to the
+    facility's own on-chain attestations (invoice + inventory snapshots)."""
+    denom_path = CLINICAL_DIR / "facility_denominators.json"
+    rates_path = CLINICAL_DIR / "drug_rates.json"
+    if not denom_path.exists() or not rates_path.exists():
+        raise HTTPException(500, "clinical data missing")
+    denom = json.loads(denom_path.read_text())
+    rates = json.loads(rates_path.read_text())
+    facility_denom = denom.get(facility_id)
+    if not facility_denom:
+        raise HTTPException(404, f"no clinical denominator for {facility_id}")
+
+    # Pull the latest inventory snapshot from the log.
+    snapshots = list_inventory(facility_id=facility_id, limit=1)
+    if not snapshots:
+        # No live upload yet — use the staged fixture directly so the UI
+        # has something to show on first paint.
+        try:
+            fx = _load_fixture(facility_id)
+            snapshot = {"line_items": fx["line_items"],
+                        "inventory_snapshots": fx["inventory_snapshots"],
+                        "period": fx["period"], "staged_only": True,
+                        "invoice_ref": fx.get("invoice_ref"),
+                        "supplier": fx.get("supplier"),
+                        "receipt_total": fx.get("receipt_total")}
+        except HTTPException:
+            return {"facility_id": facility_id, "tiles": [], "roll_up": None}
+    else:
+        snapshot = snapshots[0]
+
+    tiles = []
+    total_billed = 0.0
+    total_clinical_need_spend = 0.0
+    total_excess_spend = 0.0
+    total_markup_overpay = 0.0
+
+    inv = snapshot.get("inventory_snapshots") or {}
+    start = inv.get("start_of_month", {})
+    end   = inv.get("end_of_month", {})
+
+    for li in snapshot.get("line_items", []):
+        drug = li["drug"]
+        rate_info = rates.get(drug, {})
+        users = facility_denom["drug_users"].get(drug, 0)
+        rate_per_day = rate_info.get("rate_per_user_per_day", 0.0)
+        expected_qty = round(users * rate_per_day * 30, 1)
+        qty = li["qty"]
+        unit_price = li["unit_price"]
+        nadac = rate_info.get("ref_price_nadac") or unit_price
+        markup = round(unit_price / nadac, 2) if nadac else 1.0
+        implied = qty + start.get(drug, 0) - end.get(drug, 0)
+        excess_qty = round(implied - expected_qty, 1)
+        excess_spend = round(excess_qty * unit_price, 2)
+        markup_overpay = round(qty * (unit_price - nadac), 2)
+
+        if excess_qty > max(expected_qty * 0.3, 20) or markup > 2.5:
+            severity = "red"
+        elif excess_qty > max(expected_qty * 0.1, 5) or markup > 1.5:
+            severity = "yellow"
+        else:
+            severity = "green"
+
+        total_billed += li["total"]
+        total_clinical_need_spend += expected_qty * nadac
+        if excess_qty > 0:
+            total_excess_spend += excess_spend
+        total_markup_overpay += max(markup_overpay, 0)
+
+        tiles.append({
+            "drug":                drug,
+            "display_name":        rate_info.get("display_name", drug),
+            "unit":                rate_info.get("unit", "unit"),
+            "ndc":                 rate_info.get("ndc"),
+            "severity":            severity,
+            "residents_on_drug":   users,
+            "rate_per_user_per_day": rate_per_day,
+            "expected_monthly_qty": expected_qty,
+            "invoiced_qty":        qty,
+            "unit_price":          unit_price,
+            "ref_price_nadac":     nadac,
+            "markup_x":            markup,
+            "inventory_start":     start.get(drug, 0),
+            "inventory_end":       end.get(drug, 0),
+            "implied_consumption": implied,
+            "excess_qty":          excess_qty,
+            "excess_spend":        excess_spend,
+            "markup_overpay":      markup_overpay,
+            "line_total":          li["total"],
+        })
+
+    roll_up = {
+        "facility_id":              facility_id,
+        "facility_name":            facility_denom and snapshot.get("facility_name"),
+        "period":                   snapshot.get("period"),
+        "total_beds":               facility_denom["total_beds"],
+        "average_daily_census":     facility_denom["average_daily_census"],
+        "monthly_drug_spend":       round(total_billed, 2),
+        "matches_clinical_demand":  round(total_clinical_need_spend, 2),
+        "unaccounted_excess_spend": round(total_excess_spend, 2),
+        "markup_overpayment":       round(total_markup_overpay, 2),
+        "combined_phantom_spend":   round(total_excess_spend + total_markup_overpay, 2),
+        "tx_hash":                  snapshot.get("tx_hash"),
+        "explorer_url":             snapshot.get("explorer_url"),
+        "image_url":                snapshot.get("image_url"),
+        "metadata_url":             snapshot.get("metadata_url"),
+        "signer_role":              snapshot.get("signer_role"),
+        "staged_only":              snapshot.get("staged_only", False),
+    }
+    # Severity for the facility: worst-of-tiles weighted
+    sev_order = {"red": 2, "yellow": 1, "green": 0}
+    worst = max((t["severity"] for t in tiles), key=lambda s: sev_order.get(s, 0), default="green")
+    roll_up["severity"] = worst
+
+    return {"facility_id": facility_id, "roll_up": roll_up, "tiles": tiles}
+
+
+@app.get("/facility/inventory/fixture-preview/{facility_id}")
+def fixture_preview(facility_id: str):
+    """Preview the staged fixture for a facility — used by the facility UI to
+    display the parsed line items BEFORE committing (so the operator can review
+    what's about to be anchored)."""
+    return _load_fixture(facility_id)
 

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verity Care — Facility Operator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/nav.js" defer></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+    .pill-red    { background: #fee2e2; color: #991b1b; }
+    .pill-yellow { background: #fef3c7; color: #92400e; }
+    .pill-green  { background: #dcfce7; color: #166534; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    @keyframes pulse-slow { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+    .pulse { animation: pulse-slow 1.4s ease-in-out infinite; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen" x-data="facility()" x-init="init()">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div>
+        <div class="text-xs tracking-wider text-slate-500 uppercase">Verity Care</div>
+        <div class="text-xl font-semibold">Facility Operator</div>
+      </div>
+      <div class="flex items-center gap-4">
+        <select x-model="selected" @change="onFacilityChange()"
+                class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+          <template x-for="f in facilities" :key="f.id">
+            <option :value="f.id" x-text="f.name"></option>
+          </template>
+        </select>
+        <span class="text-xs text-slate-500">
+          on-chain: <span x-text="chain.chain || 'offline'" :class="chain.ok ? 'text-green-700 font-medium' : 'text-red-600'"></span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-6 space-y-6">
+    <!-- Upload card -->
+    <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold">Monthly inventory snapshot</h2>
+          <p class="text-sm text-slate-600">
+            Upload your pharmacy invoice / cabinet photo. We pin it to IPFS, attest the parsed line items on-chain under your facility wallet.
+          </p>
+        </div>
+        <div class="text-right text-xs text-slate-500">
+          period <span class="mono font-medium text-slate-700" x-text="period"></span>
+        </div>
+      </div>
+
+      <form @submit.prevent="submit()" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <label class="flex flex-col text-xs text-slate-500">
+            Facility
+            <input type="text" readonly :value="selectedName()"
+                   class="mt-1 bg-slate-50 border border-slate-200 rounded px-3 py-2 text-sm text-slate-800">
+          </label>
+          <label class="flex flex-col text-xs text-slate-500">
+            Uploaded by (operator ID)
+            <input x-model="form.staff_pseudonym" required
+                   class="mt-1 bg-white border border-slate-300 rounded px-3 py-2 text-sm">
+          </label>
+        </div>
+
+        <!-- Photo picker with demo pre-fill -->
+        <div class="border-2 border-dashed border-slate-300 rounded-lg p-5 text-sm">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="font-medium text-slate-700">Receipt / cabinet photo</div>
+              <div class="text-xs text-slate-500">JPG or PNG, up to 10 MB</div>
+            </div>
+            <div class="flex gap-2">
+              <input type="file" accept="image/*" x-ref="file" @change="onFile()"
+                     class="text-xs text-slate-600">
+              <button type="button" @click="useDemoPhoto()"
+                      class="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-50">
+                use demo photo
+              </button>
+            </div>
+          </div>
+          <template x-if="preview">
+            <img :src="preview" class="max-h-56 rounded border border-slate-200" alt="preview">
+          </template>
+          <template x-if="!preview">
+            <div class="text-xs text-slate-400">no file chosen</div>
+          </template>
+        </div>
+
+        <!-- Fixture preview (what will be "parsed" and anchored) -->
+        <template x-if="fixture">
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 text-sm">
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-xs tracking-wider uppercase text-slate-500">parsed line items (preview)</div>
+              <div class="text-xs text-slate-500">
+                invoice <span class="mono" x-text="fixture.invoice_ref"></span>
+                · supplier <span class="font-medium text-slate-700" x-text="fixture.supplier"></span>
+              </div>
+            </div>
+            <table class="w-full text-xs">
+              <thead class="text-slate-500">
+                <tr><th class="text-left py-1">drug</th><th class="text-right py-1">qty</th>
+                    <th class="text-right py-1">unit</th><th class="text-right py-1">total</th></tr>
+              </thead>
+              <tbody>
+                <template x-for="li in fixture.line_items" :key="li.drug">
+                  <tr class="border-t border-slate-200">
+                    <td class="py-1 capitalize" x-text="li.drug.replace(/_/g,' ')"></td>
+                    <td class="text-right mono" x-text="li.qty"></td>
+                    <td class="text-right mono" x-text="'$' + li.unit_price.toFixed(2)"></td>
+                    <td class="text-right mono" x-text="'$' + li.total.toFixed(2)"></td>
+                  </tr>
+                </template>
+                <tr class="border-t-2 border-slate-300 font-semibold">
+                  <td colspan="3" class="text-right py-1 pr-2">receipt total</td>
+                  <td class="text-right mono" x-text="'$' + (fixture.receipt_total || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <div class="flex items-center justify-end gap-3">
+          <template x-if="error">
+            <div class="text-sm text-red-700" x-text="error"></div>
+          </template>
+          <button type="submit" :disabled="uploading || !preview"
+                  class="bg-slate-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:bg-slate-400">
+            <span x-text="uploading ? 'Pinning & anchoring…' : 'Sign & anchor snapshot on-chain'"></span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Snapshot history -->
+    <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">Snapshot history</h2>
+        <button @click="loadSnapshots()" class="text-xs text-slate-600 hover:text-slate-900 border border-slate-200 rounded px-2 py-1">refresh</button>
+      </div>
+      <template x-if="!snapshots.length">
+        <div class="text-sm text-slate-500">No snapshots yet for this facility. Upload one above.</div>
+      </template>
+      <div class="space-y-3">
+        <template x-for="s in snapshots" :key="s.tx_hash">
+          <article class="border border-slate-200 rounded-lg p-4 flex gap-4">
+            <template x-if="s.image_url">
+              <a :href="s.image_url" target="_blank" class="shrink-0">
+                <img :src="s.image_url" class="w-24 h-24 object-cover rounded border border-slate-200" alt="snapshot">
+              </a>
+            </template>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium" x-text="s.period"></span>
+                <template x-if="s.block_number">
+                  <span class="text-xs pill-green px-2 py-0.5 rounded">✓ on-chain · block <span x-text="s.block_number"></span></span>
+                </template>
+                <template x-if="!s.block_number && !s.mocked">
+                  <span class="text-xs pill-yellow px-2 py-0.5 rounded pulse">⏳ anchoring…</span>
+                </template>
+                <template x-if="s.mocked">
+                  <span class="text-xs pill-yellow px-2 py-0.5 rounded">on-chain (mock)</span>
+                </template>
+                <span class="text-xs text-slate-500">signer <span class="font-medium text-slate-700" x-text="s.signer_role || 'facility'"></span></span>
+                <span class="text-xs text-slate-400 ml-auto mono" x-text="short(s.tx_hash)"></span>
+              </div>
+              <div class="mt-1 text-sm text-slate-600">
+                <span class="font-medium" x-text="s.supplier || 'supplier?'"></span>
+                · <span x-text="s.line_items ? s.line_items.length + ' line items' : '-'"></span>
+                · <span x-text="s.receipt_total ? '$' + s.receipt_total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-'"></span>
+              </div>
+              <div class="mt-1 text-xs flex gap-3 flex-wrap text-slate-500">
+                <template x-if="s.explorer_url"><a :href="s.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a></template>
+                <template x-if="s.metadata_url"><a :href="s.metadata_url" target="_blank" class="text-blue-600 hover:underline">IPFS metadata ↗</a></template>
+                <template x-if="s.image_url"><a :href="s.image_url" target="_blank" class="text-blue-600 hover:underline">IPFS photo ↗</a></template>
+                <span class="mono" x-text="'claim ' + short(s.claim_hash)"></span>
+              </div>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+  </main>
+
+<script>
+function facility() {
+  return {
+    facilities: [],
+    selected: null,
+    chain: {ok: false, chain: '?'},
+    period: new Date().toISOString().slice(0,7),
+    form: { staff_pseudonym: 'FACILITY-ADMIN' },
+    preview: null,
+    fixture: null,
+    uploading: false,
+    error: null,
+    snapshots: [],
+
+    async init() {
+      try { this.chain = await fetch('/chain/health').then(r=>r.json()); } catch(_){}
+      try {
+        this.facilities = await fetch('/facilities').then(r=>r.json());
+        const q = new URLSearchParams(location.search).get('facility');
+        this.selected = q || (this.facilities[0] && this.facilities[0].id);
+        await this.onFacilityChange();
+      } catch(e) { this.error = 'failed to load facilities'; }
+    },
+
+    selectedName() {
+      const f = this.facilities.find(x => x.id === this.selected);
+      return f ? f.name : '';
+    },
+
+    async onFacilityChange() {
+      history.replaceState(null, '', '?facility=' + encodeURIComponent(this.selected));
+      this.preview = null;
+      this.error = null;
+      // Load fixture + snapshot history in parallel.
+      await Promise.all([this.loadFixture(), this.loadSnapshots()]);
+    },
+
+    async loadFixture() {
+      try {
+        const r = await fetch('/facility/inventory/fixture-preview/' + encodeURIComponent(this.selected));
+        this.fixture = r.ok ? await r.json() : null;
+      } catch(_) { this.fixture = null; }
+    },
+
+    async loadSnapshots() {
+      try {
+        const r = await fetch('/facility/inventory?facility_id=' + encodeURIComponent(this.selected));
+        this.snapshots = r.ok ? await r.json() : [];
+      } catch(_) { this.snapshots = []; }
+    },
+
+    onFile() {
+      const f = this.$refs.file.files[0];
+      if (!f) { this.preview = null; return; }
+      const reader = new FileReader();
+      reader.onload = e => this.preview = e.target.result;
+      reader.readAsDataURL(f);
+    },
+
+    async useDemoPhoto() {
+      // Fetch the demo receipt and inject as if the user picked it.
+      try {
+        const r = await fetch('/static-demo/inventory-sample-buffalo.jpg');
+        if (!r.ok) throw new Error('demo photo not available');
+        const blob = await r.blob();
+        this.preview = URL.createObjectURL(blob);
+        // Stuff it into the file input by DataTransfer so the submit uses it.
+        const dt = new DataTransfer();
+        dt.items.add(new File([blob], 'demo-receipt.jpg', {type: blob.type || 'image/jpeg'}));
+        this.$refs.file.files = dt.files;
+      } catch(e) {
+        this.error = 'could not load demo photo: ' + e.message;
+      }
+    },
+
+    async submit() {
+      if (this.uploading) return;
+      const file = this.$refs.file.files[0];
+      if (!file) { this.error = 'pick a photo first'; return; }
+      this.uploading = true;
+      this.error = null;
+      try {
+        const fd = new FormData();
+        fd.append('facility_id', this.selected);
+        fd.append('period', this.period);
+        fd.append('staff_pseudonym', this.form.staff_pseudonym);
+        fd.append('image', file);
+        const r = await fetch('/facility/inventory/snapshot', { method:'POST', body: fd });
+        if (!r.ok) throw new Error('upload failed: ' + r.status);
+        const resp = await r.json();
+        // Prepend the new snapshot, kick off block-number polling.
+        this.snapshots.unshift(resp);
+        if (!resp.block_number && !resp.mocked) this.pollTx(resp);
+        this.preview = null;
+        this.$refs.file.value = '';
+      } catch(e) {
+        this.error = e.message || String(e);
+      }
+      this.uploading = false;
+    },
+
+    pollTx(rec) {
+      if (!rec.tx_hash || rec.block_number) return;
+      const key = rec.tx_hash;
+      let tries = 0;
+      const t = setInterval(async () => {
+        tries++;
+        try {
+          const r = await fetch('/chain/' + rec.tx_hash).then(r=>r.json());
+          if (r.verified && r.block_number) {
+            rec.block_number = r.block_number;
+            clearInterval(t);
+          }
+        } catch(_){}
+        if (tries > 20) clearInterval(t);
+      }, 3000);
+    },
+
+    short(h) { return h ? (h.slice(0,10) + '…' + h.slice(-6)) : ''; },
+  };
+}
+</script>
+</body>
+</html>

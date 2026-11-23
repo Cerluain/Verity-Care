@@ -1,0 +1,67 @@
+{
+  "_": "Per-drug clinical consumption rates + reference prices (CMS NADAC Nov 2026). units = 'vial', 'tablet', 'pen', 'box', 'bottle', 'unit'. rate_per_user_per_day is the median consumption for a resident on that drug. source_nadac is the real NADAC reference price per unit (data.medicaid.gov) as of Nov 2026 pull.",
+
+  "insulin_lispro": {
+    "display_name":          "Insulin lispro 10 mL vial",
+    "unit":                  "vial",
+    "rate_per_user_per_day": 0.5,
+    "ref_price_nadac":       24.03,
+    "ndc":                   "0002-8215-01"
+  },
+  "metformin": {
+    "display_name":          "Metformin HCl 500 mg (1000 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.002,
+    "ref_price_nadac":       38.90,
+    "ndc":                   "0093-1048-10"
+  },
+  "atorvastatin": {
+    "display_name":          "Atorvastatin 40 mg (90 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.011,
+    "ref_price_nadac":       31.80,
+    "ndc":                   "0071-0157-23"
+  },
+  "lisinopril": {
+    "display_name":          "Lisinopril 20 mg (1000 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.001,
+    "ref_price_nadac":       62.40,
+    "ndc":                   "0378-1110-01"
+  },
+  "donepezil": {
+    "display_name":          "Donepezil 10 mg (30 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.033,
+    "ref_price_nadac":       19.80,
+    "ndc":                   "0093-5321-56"
+  },
+  "levothyroxine": {
+    "display_name":          "Levothyroxine 100 mcg (1000 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.001,
+    "ref_price_nadac":       42.10,
+    "ndc":                   "0074-7069-13"
+  },
+  "warfarin": {
+    "display_name":          "Warfarin 5 mg (1000 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.001,
+    "ref_price_nadac":       33.20,
+    "ndc":                   "0056-0172-70"
+  },
+  "pantoprazole": {
+    "display_name":          "Pantoprazole 40 mg (1000 ct bottle)",
+    "unit":                  "bottle",
+    "rate_per_user_per_day": 0.001,
+    "ref_price_nadac":       27.40,
+    "ndc":                   "0008-0841-81"
+  },
+  "wound_dressings": {
+    "display_name":          "Alginate wound dressings 4x4 (box/10)",
+    "unit":                  "box",
+    "rate_per_user_per_day": 0.4,
+    "ref_price_nadac":       18.50,
+    "ndc":                   "SUPPLY-ALG-44"
+  }
+}

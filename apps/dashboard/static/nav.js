@@ -5,6 +5,7 @@
     { href: '/',         icon: '🕵️', label: 'Investigator', match: p => p === '/' },
     { href: '/guardian', icon: '👪', label: 'Guardian',     match: p => p.startsWith('/guardian') },
     { href: '/staff',    icon: '🩺', label: 'Staff',        match: p => p.startsWith('/staff') },
+    { href: '/facility', icon: '🏥', label: 'Facility',     match: p => p.startsWith('/facility') },
     { href: '/pitch',    icon: '▶',  label: 'Pitch',        match: p => p.startsWith('/pitch') },
   ];
   const path = location.pathname;

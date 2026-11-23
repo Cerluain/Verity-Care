@@ -1,0 +1,20 @@
+{
+  "facility_id":    "buffalo-center-centers-health",
+  "facility_name":  "Buffalo Center for Rehabilitation and Nursing",
+  "period":         "2026-11",
+  "invoice_ref":    "INV-BUFF-2601",
+  "supplier":       "Empire Clinical Supply LLC",
+  "line_items": [
+    {"drug": "insulin_lispro", "qty": 228, "unit_price": 100.91, "total": 23007.48},
+    {"drug": "metformin",      "qty": 12,  "unit_price":  42.30, "total":   507.60},
+    {"drug": "atorvastatin",   "qty": 15,  "unit_price": 168.44, "total":  2526.60},
+    {"drug": "lisinopril",     "qty": 8,   "unit_price": 220.15, "total":  1761.20},
+    {"drug": "donepezil",      "qty": 40,  "unit_price":   4.95, "total":   198.00},
+    {"drug": "levothyroxine",  "qty": 25,  "unit_price":  17.80, "total":   445.00}
+  ],
+  "receipt_total": 28445.88,
+  "inventory_snapshots": {
+    "start_of_month": {"insulin_lispro": 78,  "metformin": 10, "atorvastatin": 12, "lisinopril": 7,  "donepezil": 32, "levothyroxine": 20},
+    "end_of_month":   {"insulin_lispro": 42,  "metformin": 8,  "atorvastatin": 11, "lisinopril": 6,  "donepezil": 25, "levothyroxine": 18}
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "_": "Per-facility clinical denominator: how many residents use each drug, and the median daily consumption rate used to compute expected monthly volume. All synthetic but clinically grounded (CDC/CMS Part D reference rates). See drug_rates.json for the per-drug consumption benchmarks.",
+
+  "buffalo-center-centers-health": {
+    "total_beds": 200,
+    "average_daily_census": 193,
+    "drug_users": {
+      "insulin_lispro":      7,
+      "metformin":           40,
+      "atorvastatin":        95,
+      "lisinopril":          62,
+      "donepezil":           18,
+      "levothyroxine":       41,
+      "warfarin":            8,
+      "pantoprazole":        33
+    }
+  },
+
+  "accordius-rose-manor-portopiccolo": {
+    "total_beds": 111,
+    "average_daily_census": 106,
+    "drug_users": {
+      "insulin_lispro":      3,
+      "metformin":           22,
+      "atorvastatin":        49,
+      "lisinopril":          36,
+      "donepezil":           9,
+      "levothyroxine":       20,
+      "wound_dressings":     14
+    }
+  },
+
+  "mi-casa-life-care-az": {
+    "total_beds": 180,
+    "average_daily_census": 171,
+    "drug_users": {
+      "insulin_lispro":      6,
+      "metformin":           37,
+      "atorvastatin":        82,
+      "lisinopril":          55,
+      "donepezil":           17,
+      "levothyroxine":       34
+    }
+  },
+
+  "crook-county-wy-rural": {
+    "total_beds": 32,
+    "average_daily_census": 29,
+    "drug_users": {
+      "insulin_lispro":      1,
+      "metformin":           6,
+      "atorvastatin":        14,
+      "lisinopril":          11,
+      "levothyroxine":       7
+    }
+  },
+
+  "haven-health-green-valley": {
+    "total_beds": 111,
+    "average_daily_census": 103,
+    "drug_users": {
+      "insulin_lispro":      3,
+      "metformin":           21,
+      "atorvastatin":        47,
+      "lisinopril":          34,
+      "donepezil":           8,
+      "levothyroxine":       19
+    }
+  },
+
+  "terraces-of-phoenix-az": {
+    "total_beds": 64,
+    "average_daily_census": 61,
+    "drug_users": {
+      "insulin_lispro":      2,
+      "metformin":           13,
+      "atorvastatin":        27,
+      "lisinopril":          18,
+      "levothyroxine":       11
+    }
+  }
+}

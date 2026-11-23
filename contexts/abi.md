@@ -359,7 +359,7 @@ Replacing the Voice pillar. Staff member delivers a specific thing to a specific
 
 Verifier can refetch metadata from any IPFS gateway, recompute the hash, and confirm it matches what's on-chain. Walmart-receipt-photo pattern, done properly with content-addressing.
 
-Note on contract: we redeployed. New VerityCommit lives at `0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb` (old `0xF806…` is dead). Everything in `shared.env.example` already references the new address.
+Note on contract: we redeployed. New VerityCommit lives at `0x052934b9db3677b5943a8882CA6bd93868245729 (redeployed Nov 22 for claim_type=6)` (old `0xF806…` is dead). Everything in `shared.env.example` already references the new address.
 
 ### [ ] TODO 1 — Build the Proof-of-Service tab UI (P0, backend already works)
 
@@ -419,7 +419,7 @@ If #1 and #2 both return 200 with a `tx_hash` + `metadata_cid`, backend is good.
 
 ### What Saswata already shipped on this
 
-- VerityCommit redeployed with claim_type range extended to 1..5 at `0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb`
+- VerityCommit redeployed with claim_type range extended to 1..5 at `0x052934b9db3677b5943a8882CA6bd93868245729 (redeployed Nov 22 for claim_type=6)`
 - Staff signer wallet funded (0.001 ETH)
 - `apps/onchain /delivery` + `/deliveries` endpoints live, smoke-tested with a 1×1 PNG: real tx on Base Sepolia block 62402565, hash round-trip verified byte-for-byte
 - Dashboard `/delivery` + `/deliveries` proxies live so browser hits one origin

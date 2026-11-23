@@ -87,7 +87,7 @@ State Medicaid Fraud Control Units (53 of them across states + territories). The
   - `apps/onchain` (FastAPI, :8001) — holds all four signing wallets + ed25519 case-file key + Pinata uploader. Every commit flows through here.
   - `apps/phantom-spend` (Abhi's FastAPI, :8003) — SPEND signals.
   - `apps/phantom-shift` (Leo's, :8002) — not yet shipped.
-- Crypto: Solidity `VerityCommit` on Base Sepolia (`0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb`). Four distinct signer wallets. Ed25519 envelope sig on exported case files. SHA-256 content hashes. IPFS via Pinata for proof-of-service.
+- Crypto: Solidity `VerityCommit` on Base Sepolia (`0x052934b9db3677b5943a8882CA6bd93868245729 (redeployed Nov 22 for claim_type=6)`). Four distinct signer wallets. Ed25519 envelope sig on exported case files. SHA-256 content hashes. IPFS via Pinata for proof-of-service.
 - PDF: `window.print()` on the case-file view.
 
 ## Data plan

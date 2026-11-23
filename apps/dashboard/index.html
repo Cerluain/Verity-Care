@@ -110,6 +110,143 @@
       <!-- SPENDING -->
       <template x-if="selected && activeTab === 'spending'">
         <div>
+          <!-- View toggle: 3 fraud signals vs drug-level disparity -->
+          <div class="mb-4 flex items-center gap-2 text-sm">
+            <button @click="spendView = 'signals'"
+                    :class="spendView === 'signals' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'"
+                    class="rounded px-3 py-1 font-medium">3-signal fraud view</button>
+            <button @click="spendView = 'drug'; loadDrugDisparity()"
+                    :class="spendView === 'drug' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'"
+                    class="rounded px-3 py-1 font-medium">Drug-level view</button>
+            <span class="text-xs text-slate-500 ml-auto">
+              Drug-level reconciles clinical demand (residents × daily rate) against facility's own on-chain inventory + invoice attestations.
+            </span>
+          </div>
+
+          <!-- DRUG-LEVEL DISPARITY VIEW -->
+          <template x-if="spendView === 'drug'">
+            <div>
+              <template x-if="!drug.data">
+                <div class="text-slate-500 text-sm">Loading drug-level disparity…</div>
+              </template>
+              <template x-if="drug.data && drug.data.tiles && !drug.data.tiles.length">
+                <div class="text-slate-500 text-sm">No inventory snapshot for this facility yet. Facility operator needs to upload one at <a href="/facility" class="text-blue-600 underline">/facility</a>.</div>
+              </template>
+
+              <!-- Roll-up banner -->
+              <template x-if="drug.data && drug.data.roll_up">
+                <div class="mb-5 rounded-lg p-5 border"
+                     :class="{red:'pill-red border-red-200', yellow:'pill-yellow border-yellow-200', green:'pill-green border-green-200'}[drug.data.roll_up.severity]">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <div class="text-xs tracking-wider uppercase opacity-80 mb-1">facility roll-up · <span x-text="drug.data.roll_up.period"></span></div>
+                      <div class="text-lg font-semibold" x-text="drug.data.roll_up.facility_name || selected.name"></div>
+                      <div class="text-xs opacity-80" x-text="drug.data.roll_up.total_beds + ' beds · ' + drug.data.roll_up.average_daily_census + ' avg daily census'"></div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-xs opacity-80">combined phantom spend</div>
+                      <div class="text-2xl font-bold mono" x-text="'$' + drug.data.roll_up.combined_phantom_spend.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})"></div>
+                    </div>
+                  </div>
+                  <div class="mt-4 grid grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <div class="opacity-80">monthly drug spend</div>
+                      <div class="font-semibold text-sm" x-text="'$' + drug.data.roll_up.monthly_drug_spend.toLocaleString('en-US',{maximumFractionDigits:0})"></div>
+                    </div>
+                    <div>
+                      <div class="opacity-80">matches clinical demand (NADAC)</div>
+                      <div class="font-semibold text-sm" x-text="'$' + drug.data.roll_up.matches_clinical_demand.toLocaleString('en-US',{maximumFractionDigits:0})"></div>
+                    </div>
+                    <div>
+                      <div class="opacity-80">unaccounted + markup overpay</div>
+                      <div class="font-semibold text-sm" x-text="'$' + (drug.data.roll_up.unaccounted_excess_spend + drug.data.roll_up.markup_overpayment).toLocaleString('en-US',{maximumFractionDigits:0})"></div>
+                    </div>
+                  </div>
+                  <template x-if="drug.data.roll_up.staged_only">
+                    <div class="mt-3 text-xs opacity-80 italic">
+                      ⓘ staged fixture (no live snapshot anchored yet) — operator can anchor at <a href="/facility" class="underline">/facility</a>
+                    </div>
+                  </template>
+                  <template x-if="drug.data.roll_up.tx_hash">
+                    <div class="mt-3 text-xs flex gap-3 flex-wrap opacity-90">
+                      <span>anchored by <span class="font-medium" x-text="drug.data.roll_up.signer_role"></span></span>
+                      <template x-if="drug.data.roll_up.explorer_url">
+                        <a :href="drug.data.roll_up.explorer_url" target="_blank" class="text-blue-700 underline">Basescan ↗</a>
+                      </template>
+                      <template x-if="drug.data.roll_up.image_url">
+                        <a :href="drug.data.roll_up.image_url" target="_blank" class="text-blue-700 underline">IPFS photo ↗</a>
+                      </template>
+                      <template x-if="drug.data.roll_up.metadata_url">
+                        <a :href="drug.data.roll_up.metadata_url" target="_blank" class="text-blue-700 underline">IPFS metadata ↗</a>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- Per-drug tiles -->
+              <div class="space-y-3">
+                <template x-for="t in (drug.data?.tiles || [])" :key="t.drug">
+                  <article class="bg-white border rounded-lg p-4 shadow-sm"
+                           :class="{red:'border-red-200', yellow:'border-amber-200', green:'border-green-200'}[t.severity]">
+                    <div class="flex items-start justify-between gap-4 mb-2">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full" :class="'dot-' + t.severity"></span>
+                        <span class="font-medium" x-text="t.display_name"></span>
+                        <span class="text-xs rounded px-1.5 py-0.5" :class="'pill-' + t.severity" x-text="t.severity"></span>
+                        <span class="text-xs text-slate-400 mono" x-text="t.ndc || ''"></span>
+                      </div>
+                      <div class="text-right text-xs text-slate-500">
+                        line total <span class="font-medium text-slate-800 mono" x-text="'$' + t.line_total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"></span>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-5 gap-3 text-xs">
+                      <div>
+                        <div class="text-slate-500">residents on drug</div>
+                        <div class="font-semibold text-slate-800 mono" x-text="t.residents_on_drug"></div>
+                        <div class="text-slate-400" x-text="'rate ' + t.rate_per_user_per_day + ' ' + t.unit + '/day'"></div>
+                      </div>
+                      <div>
+                        <div class="text-slate-500">expected / mo</div>
+                        <div class="font-semibold text-slate-800 mono" x-text="t.expected_monthly_qty"></div>
+                        <div class="text-slate-400">clinical</div>
+                      </div>
+                      <div>
+                        <div class="text-slate-500">invoiced</div>
+                        <div class="font-semibold text-slate-800 mono" x-text="t.invoiced_qty"></div>
+                        <div class="text-slate-400" x-text="'@$' + t.unit_price.toFixed(2)"></div>
+                      </div>
+                      <div>
+                        <div class="text-slate-500">on-hand Δ</div>
+                        <div class="font-semibold text-slate-800 mono" x-text="t.inventory_start + '→' + t.inventory_end"></div>
+                        <div class="text-slate-400" x-text="'implied ' + t.implied_consumption"></div>
+                      </div>
+                      <div>
+                        <div class="text-slate-500">disparity</div>
+                        <div class="font-semibold mono" :class="t.excess_qty > 0 ? 'text-red-700' : 'text-slate-800'"
+                             x-text="(t.excess_qty > 0 ? '+' : '') + t.excess_qty + ' ' + t.unit"></div>
+                        <div class="text-slate-400" x-text="t.markup_x + 'x NADAC'"></div>
+                      </div>
+                    </div>
+                    <template x-if="t.severity !== 'green' && (t.excess_spend > 0 || t.markup_overpay > 0)">
+                      <div class="mt-3 pt-3 border-t border-slate-100 text-xs flex gap-4 text-red-700">
+                        <template x-if="t.excess_qty > 0">
+                          <span>excess spend <span class="font-semibold mono" x-text="'$' + t.excess_spend.toLocaleString('en-US',{maximumFractionDigits:0})"></span></span>
+                        </template>
+                        <template x-if="t.markup_overpay > 0">
+                          <span>markup overpayment <span class="font-semibold mono" x-text="'$' + t.markup_overpay.toLocaleString('en-US',{maximumFractionDigits:0})"></span></span>
+                        </template>
+                      </div>
+                    </template>
+                  </article>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- 3-SIGNAL FRAUD VIEW (existing) -->
+          <template x-if="spendView === 'signals'">
+            <div>
           <!-- Verdict banner from the spend_overall card -->
           <template x-if="!loadingSpend && spendOverall()">
             <div class="mb-5 rounded-lg p-4 flex items-center gap-3"
@@ -305,6 +442,7 @@
               </div>
             </div>
           </template>
+          <!-- /spendView === 'signals' -->
         </div>
       </template>
 
@@ -728,6 +866,8 @@ function dashboard() {
     selected: null,
     spend: { signals: [] },
     loadingSpend: false,
+    spendView: 'signals',     // 'signals' | 'drug'
+    drug: { data: null, loading: false },
     chain: { ok: false, chain: '?', mock: true },
     aggregate_severity: null,
     batchCommitting: false,
@@ -752,6 +892,18 @@ function dashboard() {
       } catch (e) { console.error(e); }
     },
 
+    async loadDrugDisparity() {
+      if (!this.selected) return;
+      this.drug = { data: null, loading: true };
+      try {
+        const id = this.selected.id;
+        const r = await fetch('/investigator/drug-disparity/' + encodeURIComponent(id));
+        const j = r.ok ? await r.json() : null;
+        if (this.selected?.id === id) this.drug.data = j;
+      } catch(_) { this.drug.data = null; }
+      this.drug.loading = false;
+    },
+
     async select(f) {
       // Clear pollers from the previous facility.
       for (const id of Object.values(this._pollers)) clearInterval(id);
@@ -759,6 +911,7 @@ function dashboard() {
 
       this.selected = f;
       this.spend = { signals: [] };
+      this.drug = { data: null, loading: false };
       this.aggregate_severity = null;
       this.loadingSpend = true;
       this.pos.deliveries = [];

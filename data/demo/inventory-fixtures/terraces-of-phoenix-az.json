@@ -1,0 +1,19 @@
+{
+  "facility_id":    "terraces-of-phoenix-az",
+  "facility_name":  "The Terraces of Phoenix",
+  "period":         "2026-11",
+  "invoice_ref":    "INV-TRP-5540",
+  "supplier":       "AmeriSourceBergen",
+  "line_items": [
+    {"drug": "insulin_lispro", "qty": 32, "unit_price":  22.40, "total":   716.80},
+    {"drug": "metformin",      "qty": 1,  "unit_price":  39.20, "total":    39.20},
+    {"drug": "atorvastatin",   "qty": 10, "unit_price":  14.20, "total":   142.00},
+    {"drug": "lisinopril",     "qty": 1,  "unit_price":  11.60, "total":    11.60},
+    {"drug": "levothyroxine",  "qty": 1,  "unit_price":  42.10, "total":    42.10}
+  ],
+  "receipt_total": 951.70,
+  "inventory_snapshots": {
+    "start_of_month": {"insulin_lispro": 10, "metformin": 2, "atorvastatin": 6, "lisinopril": 2, "levothyroxine": 2},
+    "end_of_month":   {"insulin_lispro": 12, "metformin": 2, "atorvastatin": 7, "lisinopril": 2, "levothyroxine": 2}
+  }
+}

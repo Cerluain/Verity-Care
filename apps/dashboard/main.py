@@ -136,6 +136,40 @@ def admin_reset(scope: str = "all"):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.post("/facility/inventory/snapshot")
+async def facility_snapshot(req: Request):
+    """Stream the multipart body through to the onchain service."""
+    body = await req.body()
+    headers = {"content-type": req.headers.get("content-type", "application/octet-stream")}
+    r = _http.post(f"{ONCHAIN_SERVICE_URL}/facility/inventory/snapshot", content=body, headers=headers, timeout=60.0)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/facility/inventory")
+def facility_inventory(facility_id: str | None = None, limit: int = 20):
+    params = {"limit": limit}
+    if facility_id: params["facility_id"] = facility_id
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/facility/inventory", params=params)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/facility/inventory/fixture-preview/{facility_id}")
+def facility_fixture_preview(facility_id: str):
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/facility/inventory/fixture-preview/{facility_id}")
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/investigator/drug-disparity/{facility_id}")
+def investigator_drug_disparity(facility_id: str):
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/investigator/drug-disparity/{facility_id}", timeout=15.0)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/facility")
+def facility_page():
+    return FileResponse(APP_DIR / "facility.html")
+
+
 @app.get("/chain/health")
 def chain_health():
     try:
@@ -190,3 +224,8 @@ def chain_verify(claim_hash: str, claim_type: int | None = None):
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Mount data/demo/ so the facility UI can fetch the staged inventory photo.
+_DEMO_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "demo"
+if _DEMO_DIR.exists():
+    app.mount("/static-demo", StaticFiles(directory=_DEMO_DIR), name="static-demo")
