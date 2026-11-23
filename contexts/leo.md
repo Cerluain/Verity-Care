@@ -1,123 +1,107 @@
-# System Design Document: Elder Care Fraud Prevention & Service Verification Architecture
+# System Design Document: Elder Care Integrity Platform (Hackathon MVP & Scale Roadmap)
 
 ## 1. Executive Summary
 
-Government-funded elder care (Medicare, Medicare Advantage, and state Medicaid programs such as Arizona's AHCCCS/ALTCS) suffers from three distinct, high-impact fraud and financial abuse vectors:
+Government-funded elder care across Medicare, Medicare Advantage, and state Medicaid programs (such as Arizona's AHCCCS/ALTCS) suffers from three distinct, high-impact fraud and financial abuse vectors:
 
-1. **Ghost Jobs & Phantom Staffing:** Facilities falsify Payroll-Based Journal (PBJ) hours or use "tap-and-leave" tactics to inflate CMS Five-Star ratings and meet minimum staffing mandates while leaving care floors dangerously understaffed.
-2. **Related-Party Cost Markups:** Parent corporations tunnel roughly 63% to 68% of true facility profits into affiliated shell LLCs (real estate, management, medical supplies) at inflated transfer prices, making facilities appear unprofitable on cost reports to lobby for higher taxpayer reimbursement rates.
-3. **Phantom Care & Undelivered Items:** Unbundled ancillary providers (Durable Medical Equipment suppliers, visiting therapists, mobile clinics, and home health agencies) bill Medicare/Medicaid for items and visits never delivered to beneficiaries.
+1. **Ghost Jobs & Phantom Staffing:** Facilities falsify Payroll-Based Journal (PBJ) hours or use "tap-and-leave" badge schemes to inflate CMS Five-Star ratings and satisfy minimum staffing mandates while leaving care floors dangerously understaffed.
+2. **Related-Party Cost Markups:** Parent organizations tunnel an estimated 63% to 68% of true facility profits into affiliated shell LLCs (real estate, management, therapy, medical supplies) via inflated transfer prices, making facilities appear unprofitable on cost reports to lobby for higher reimbursement rates.
+3. **Phantom Care & Undelivered Items:** Unbundled ancillary providers (Durable Medical Equipment suppliers, visiting therapists, mobile clinics, and home health agencies) bill Medicare or Medicaid for items and visits never delivered to beneficiaries.
 
-Current oversight relies on **post-hoc self-reported filings** and understaffed reactive audits. This design document outlines a modular verification architecture combining **Zero-Knowledge Proofs (ZKPs)**, **hardware-anchored mobile credentials**, **automated benchmark pricing**, and **targeted proxy/beneficiary verification**—retaining only the mechanisms that score average or higher on operational usability, data reliability, privacy preservation, and regulatory feasibility.
+Current oversight relies on **post-hoc self-reported filings** and understaffed reactive audits. This design document defines a unified **Eldercare Integrity Platform** built around a 7-hour hackathon MVP architecture and a phased commercial rollout, retaining only mechanisms that score average or higher on operational usability, data reliability, privacy preservation, and legal feasibility.
 
 ---
 
 ## 2. Solution Filtering & Viability Matrix
 
-Before detailing the system architecture, lower-viability concepts explored during discovery were filtered out in favor of higher-leverage approaches:
+Lower-viability concepts identified during discovery were filtered out in favor of mechanisms with higher data reliability and lower deployment friction:
 
-| Fraud Domain | Discarded / Low-Viability Approaches | Retained Approaches (Average to High Viability) | Rationale for Selection |
+| Fraud Domain | Discarded / Low-Viability Approaches | Retained High-Viability Approaches | Core Design Rationale |
 | :--- | :--- | :--- | :--- |
-| **Ghost Staffing** | Legacy 125kHz physical RFID badges; unanchored timeclock apps | **Hardware-Anchored Mobile NFC + ZK-Staffing Proofs** | Physical cards are trivially shared or cloned; smartphone Secure Elements + biometric checks + multi-zone door anchors bind presence to a licensed human without mass surveillance. |
-| **Cost Markups** | Manual line-item audits of shell LLC ownership trees; forced public disclosure of raw vendor contracts | **1. GPO Reference Pricing Caps**<br>**2. Signed E-Invoicing + ZK Markup/Ownership Proofs**<br>**3. Consolidated GAAP Reporting (Corporate Chains)** | Reference caps eliminate shell-company incentives with zero operator friction; ZK e-invoices prove cost integrity while protecting proprietary supplier trade secrets. |
-| **Phantom Care** | Direct cold-calling of nursing home residents inside SNFs | **1. Healthcare Proxy / POA EOB Alerting (Blue Button 2.0)**<br>**2. Direct Post-Visit Verification for Home Health / HCBS**<br>**3. B2B Rogue-Vendor Shield for Payers & SNFs** | ~42%–58% of SNF residents have dementia/cognitive impairment and lack personal phones. Routing SNF alerts to Healthcare Proxies and focusing direct calls on independent Home Health patients solves data noise and retaliation risks. |
+| **Ghost Jobs & Staffing** | Physical RFID keycards (easily cloned or left at the front desk for managers to tap); raw GPS/camera employee surveillance (violates worker privacy and faces union pushback). | **Hardware-Anchored Mobile NFC + Zero-Knowledge Proofs (ZKPs):** Smartphone Secure Enclave keys paired with biometric unlock, multi-zone door taps, and Poseidon nullifiers. | Proves distinct licensed staff worked full shifts across multiple building zones without exposing employee PII, wages, or exact movement trails. |
+| **Related-Party Cost Markups** | Manual forensic audits of every sister LLC's private tax returns; requiring small independent homes to overhaul accounting systems overnight. | **GPO Reference-Pricing Caps + Beneficial Ownership Cross-Referencing:** Capping allowable supply costs at Group Purchasing Organization (GPO) benchmarks and flagging shared LLC owners/registered agents. | Uses existing CMS "Prudent Buyer" legal authority (42 CFR 413.17) to disallow markups automatically without needing access to shell company bank accounts. |
+| **Phantom Care & Undelivered Items** | Calling nursing home residents directly (42% to 58% have dementia/cognitive impairment, lack personal phones, or fear staff retaliation). | **Healthcare Proxy / Family POA Verification + Home Health Targeting:** Automated SMS/voice checks sent to the resident's designated Healthcare Proxy triggered by high-risk Medicare Part B / DMEPOS claims. | Family caregivers review bills without cognitive barriers or fear of retaliation; direct beneficiary calls are reserved for cognitively independent in-home care recipients. |
 
 ---
 
-## 3. Module A: Verifiable Staffing & Anti-Ghost-Job Protocol
+## 3. Hackathon MVP Architecture (7-Hour Sprint Scope)
 
-### 3.1 Objective
-Mathematically prove that a nursing facility met mandated caregiver-to-resident staffing ratios with active, state-licensed staff physically working across the building—without exposing employee Personally Identifiable Information (PII), schedules, wages, or HIPAA-protected resident records.
+For the 12-hour hackathon demo, all three tracks integrate into a single **Eldercare Integrity Dashboard** monitoring a simulated facility (**Sunset Pines Care Facility #402**, 30 residents, minimum requirement of 5 licensed nurses per shift).
 
-### 3.2 Core Components
-1. **Credential Issuer (State Licensing Board / Identity Verifier):**
-   * Performs a one-time verification of the worker's government ID and active clinical license (RN, LPN, CNA).
-   * Issues a blind signature or **BBS+ Verifiable Credential** bound to a non-exportable keypair generated inside the employee's smartphone **Secure Element / Trusted Execution Environment (TEE)**.
-2. **Hardware Anchors (Existing Facility NFC Readers):**
-   * Leverages existing contactless readers on medication rooms, supply closets, staff breakrooms, and memory-care wing doors.
-   * Each reader holds an embedded cryptographic signing key and executes a challenge-response handshake with the employee's phone during normal workflow taps.
-3. **Biometric Liveness Gate:**
-   * Unlocking the mobile NFC credential requires local device biometric authentication (FaceID/fingerprint), preventing managers from hoarding physical cards or carrying multiple unlocked phones for absent workers.
-4. **ZK Prover & Verifier Circuit (Noir / Circom):**
-   * At the end of each shift, the facility's local server ingests hardware-signed tap logs as **private witnesses** and generates a succinct proof (`VALID` / `INVALID`) submitted to regulators or CMS PBJ portals.
+```
++-----------------------------------------------------------------------------------+
+|                        ELDERCARE INTEGRITY DASHBOARD (React)                      |
+|  [ Tab 1: Floor ZKP Staffing ]   [ Tab 2: Family Proxy ]   [ Tab 3: Cost X-Ray ]  |
++----------------+-----------------------------+------------------------------------+
+                 |                             |
+     +-----------v-----------+     +-----------v-----------+     +------------------+
+     |   Noir / Barretenberg |     |  Twilio SMS / Voice   |     |  GPO Benchmark & |
+     |   ZK Prover & Verifier|     |  Webhook Engine       |     |  LLC Graph Engine|
+     +-----------------------+     +-----------------------+     +------------------+
+```
 
-### 3.3 Zero-Knowledge Circuit Constraints
-For a shift window $S$ and active resident census $C$, the circuit enforces four simultaneous constraints:
+### Track 1: Ghost-Job ZKP Verification Pipeline (Primary Cryptographic Engine)
+* **Stack:** Noir (`nargo`) + Barretenberg (`bb`) backend wrapped in a lightweight FastAPI endpoint (or `@noir-lang/noir_js` WASM), connected to a split-screen React UI.
+* **Circuit Inputs (`main.nr`):**
+  * **Private Witnesses (Never leave facility machine):**
+    * `worker_secrets: [Field; 5]` (simulated smartphone Secure Enclave keys)
+    * `door_ids: [[Field; 2]; 5]` (NFC hardware anchor IDs tapped during shift)
+    * `timestamps: [[u64; 2]; 5]` (Unix timestamps of start and mid/end taps)
+  * **Public Inputs (Visible to State Auditor):**
+    * `shift_id: pub Field`
+    * `min_shift_seconds: pub u64` (e.g., `25200` seconds for 7 hours)
+    * `claimed_nullifiers: pub [Field; 5]`
+* **Circuit Constraints:**
+  1. **Cryptographic Uniqueness (Anti-Double-Counting):** For each nurse $i \in \{0..4\}$, verify $\text{claimed\_nullifiers}[i] = \text{Poseidon}(\text{worker\_secrets}[i], \text{shift\_id})$, and assert $\text{claimed\_nullifiers}[i] \neq \text{claimed\_nullifiers}[j]$ for all $i \neq j$.
+  2. **Spatial Liveness (Anti-Front-Desk Tap):** Assert $\text{door\_ids}[i][0] \neq \text{door\_ids}[i][1]$, proving each worker authenticated across at least two physically separate building zones (e.g., `Wing_A_MedRoom` and `Wing_B_Station`).
+  3. **Temporal Shift Duration:** Assert $\text{timestamps}[i][1] > \text{timestamps}[i][0]$ and $(\text{timestamps}[i][1] - \text{timestamps}[i][0]) \ge \text{min\_shift\_seconds}$.
+* **Demo UX (Split-Screen View):**
+  * **Left Panel (Facility Local Machine — Private):** Displays raw nurse names, badge IDs, and door tap logs with two one-click presets: `Load Valid Shift (5 Active Nurses)` and `Load Ghost-Job Fraud (Cloned Front-Desk Taps)`.
+  * **Right Panel (Regulator Auditor Portal — Public):** Displays *only* the cryptographic proof bytes, anonymous nullifier hashes, and a `VERIFIED` or `REJECTED` compliance status—demonstrating zero PII leakage.
 
-1. **Credential & Hardware Authenticity:** Every clock-in, zone tap, and clock-out signature traces back to an unrevoked state caregiver credential and a registered facility door reader.
-2. **Epoch Nullifier Uniqueness (Anti-Double-Counting):** Each worker deterministically derives a shift nullifier:
-   $$\text{Nullifier}_i = \text{Hash}(\text{sk}_i, \text{Date}, \text{ShiftID})$$
-   The circuit enforces $\text{Nullifier}_i \neq \text{Nullifier}_j$ for all $i \neq j$, preventing a single credential from being counted twice in one facility or concurrently across two facilities.
-3. **Minimum Shift Duration & Spatial-Temporal Liveness:**
-   * Total shift duration meets required minimums:
-     $$T_{\text{out}, i} - T_{\text{in}, i} \ge H_{\min}$$
-   * **Multi-Zone Trajectory:** The worker must record authenticated taps across at least $k$ distinct building zones (e.g., Wing A Med Room, Central Station, Supply Closet) distributed across the shift.
-   * **Impossible-Travel Bound:** Consecutive taps by worker $i$ at doors $A$ and $B$ must obey physical walking speed limits:
-     $$\frac{d(\text{Door}_A, \text{Door}_B)}{t_B - t_A} \le v_{\max}$$
-4. **Staffing Ratio Compliance:** The count of verified active workers $N_{\text{valid}}$ satisfies the mandated clinical ratio $R(C)$ for the daily resident census:
-   $$N_{\text{valid}} \ge R(C)$$
+### Track 2: Family Proxy Verification Engine (Phantom Care)
+* **Stack:** Synthetic CMS Blue Button 2.0 FHIR `ExplanationOfBenefit` JSON + Node/Python backend + Twilio SMS/Voice API.
+* **Workflow:**
+  1. Ingest a resident's recent unbundled Medicare Part B / DMEPOS claims (e.g., `$650` knee orthotic brace, `4x` outpatient physical therapy visits).
+  2. Rules engine flags high-fraud-risk HCPCS codes and dispatches an automated SMS or voice call to the registered Healthcare Proxy / Power of Attorney.
+  3. When the proxy replies `NO` (or presses `2` on a voice call), a webhook updates the dashboard status from `Pending Verification` to `Disputed by Family Proxy` and freezes claim payout simulation.
 
-### 3.4 Usability & Feasibility Assessment
-* **Operator & Staff Friction:** **Low.** Nurses already tap into medication rooms and restricted wings dozens of times per shift; replacing legacy plastic badges with Apple/Google Wallet NFC credentials streamlines access while generating cryptographic proofs passively.
-* **Privacy:** **Strict Zero-Knowledge.** Regulators verify aggregate staffing compliance; employee identities and movement trails never leave the facility's local proving environment.
-
----
-
-## 4. Module B: Anti-Markup & Cost-Reporting Integrity Layer
-
-### 4.1 Objective
-Prevent nursing home operators from inflating supply and service expenses through related-party shell LLCs without requiring auditors to manually untangle multi-state corporate ownership trees.
-
-### 4.2 Dual-Track Solution Architecture
-
-#### Track B1: Automated GPO Reference Pricing Caps (Commodities & Standard Supplies)
-* **Mechanism:** Rather than auditing vendor ownership for standardized goods (gloves, wound dressings, incontinence supplies, nutritional supplements), regulators link cost-report reimbursement ceilings directly to public **Group Purchasing Organization (GPO)** fair-market unit price indexes (enforcing Medicare's existing "Prudent Buyer" rule under 42 CFR 413.17).
-* **Rule:** If a facility buys bandages from an affiliated LLC at $50/box when the GPO benchmark cap is $5/box, the $45 markup is automatically disallowed from cost-report rate calculations.
-* **Usability & Legal Feasibility:** **Highest.** Adds zero administrative burden to honest operators and requires no new statutory authority—only routine index updates by CMS or state Medicaid agencies.
-
-#### Track B2: Signed E-Invoicing + ZKP Markup & Ownership Proofs (Wholesalers & Contracts)
-* **Mechanism:** Primary manufacturers and wholesale distributors issue cryptographically signed electronic invoices (via EDI/Peppol standards) containing item SKU, quantity, unit price, and a hashed beneficial-ownership tree commitment.
-* **ZK Compliance Proof:** When filing annual cost reports, the facility's accounting/ERP software (e.g., PointClickCare, NetSuite) generates a ZK proof verifying:
-  1. **Zero Intercompany Markup:** The expense claimed on the cost report equals the original primary supplier's signed invoice amount ($P_{\text{claimed}} \le P_{\text{invoice}}$).
-  2. **Ownership Disjointness (Non-Membership Proof):** The cryptographic hash set of the vendor's beneficial owners shares zero intersection with the nursing home's ownership tree ($\text{Owners}_{\text{facility}} \cap \text{Owners}_{\text{vendor}} = \emptyset$), or any shared ownership has automatically triggered a downward cost-basis adjustment.
-* **Usability & Legal Feasibility:** **Moderate-to-High.** Eliminates the industry's primary legal objection to transparency—protecting proprietary bulk discounts and supplier contracts as trade secrets—making it ideal as a voluntary "audit safe harbor" for state Medicaid programs.
-
-#### Track B3: Consolidated GAAP Financials (Multi-Facility Chains)
-* **Mechanism:** Require multi-entity corporate operators and private equity groups controlling both facilities and vendors to submit audited, consolidated GAAP financial statements (modeled on Illinois transparency statutes) that automatically eliminate intercompany transfer profits.
+### Track 3: Related-Party Cost-Report X-Ray (LLC Markup Detector)
+* **Stack:** Python (`pandas` / FastAPI) or client-side TypeScript CSV/JSON analyzer.
+* **Workflow:**
+  1. Ingest a mock facility expense CSV (`vendor_name`, `item_category`, `unit_price`, `total_billed`) alongside a corporate entity registry JSON (modeled on CMS Additional Disclosable Party / PECOS filings).
+  2. Cross-reference every line item against a **GPO Fair-Market Benchmark Table** to compute excess markup deltas above open-market rates.
+  3. Perform an entity-resolution check matching shared parent LLCs, registered agents, or business addresses between the facility and vendors, surfacing hidden profit tunneling on the dashboard.
 
 ---
 
-## 5. Module C: Phantom Care & Unbundled Billing Verification Engine
+## 4. 7-Hour Sprint Execution Plan
 
-### 5.1 Objective
-Detect and block fraudulent claims for undelivered medical equipment, therapy sessions, and clinical visits before taxpayer funds are paid out—without relying on unreliable cold calls to cognitively impaired nursing home residents.
-
-### 5.2 Three High-Viability Product Pillars
-
-#### Pillar C1: Healthcare Proxy / POA EOB Alerting (For SNF Residents)
-* **Data Ingestion:** Integrates with **CMS Blue Button 2.0 APIs**, Medicare Summary Notices (MSNs), or Medicare Advantage Explanation of Benefits (EOB) feeds with beneficiary/proxy consent.
-* **Anomaly Triggering:** Flags high-risk unbundled Part B and DMEPOS claims billed on top of a resident's daily SNF rate—specifically orthotic braces, custom wheelchairs, surgical wound dressings, mobile imaging, and high-frequency therapy sessions.
-* **Verification Workflow:** Instead of calling the resident inside the facility, the system sends an automated SMS or plain-language voice prompt to the resident's **designated Healthcare Proxy / Power of Attorney**:
-  > *"Medicare was billed $650 by [Vendor Name] for a knee brace and 4 physical therapy visits for [Resident Name] this week. Reply YES to confirm receipt or NO to flag for review."*
-* **Impact:** Bypasses dementia-related recall errors, avoids resident fear of staff retaliation, and leverages family caregivers who actively scrutinize bills.
-
-#### Pillar C2: Direct Recipient Verification for Home Health & Medicaid HCBS
-* **Target Market:** In-home nursing, physical therapy, and Medicaid Home and Community-Based Services (HCBS) personal care agencies.
-* **Why It Works Here:** Unlike SNF residents, home-care beneficiaries live independently, possess personal mobile phones, and receive care billed strictly per visit or per hour.
-* **Verification Workflow:** Following Electronic Visit Verification (EVV) check-out, the platform triggers an automated post-visit SMS or interactive voice call directly to the patient confirming caregiver arrival, duration, and services rendered, routing mismatches directly to payer Special Investigations Units (SIUs).
-
-#### Pillar C3: Pre-Payment Rogue-Vendor Shield (B2B Payer & SNF SaaS)
-* **Mechanism:** Nursing homes are frequently targeted by outside fraudulent DME suppliers and labs that obtain resident Medicare numbers and submit phantom claims without facility authorization.
-* **Workflow:** Cross-references incoming Part B / DMEPOS claims against the nursing home's internal clinical orders and approved vendor whitelist prior to claim settlement. If an unapproved outside supplier bills for supplies not ordered by the facility's medical director, the claim is auto-held for payer review.
-
----
-
-## 6. Phased Implementation & Go-To-Market Roadmap
-
-Because deploying hardware-anchored ZKPs requires institutional adoption while proxy/payer verification can launch immediately via software APIs, the system is designed for phased rollout:
-
-| Phase | Target Modules | Primary Customer / Partner | Key Deliverable & Value Proposition |
+| Time Block | Track 1 (ZKP Ghost Jobs) | Track 2 (Family Proxy) | Track 3 (Markup Detector) |
 | :--- | :--- | :--- | :--- |
-| **Phase 1 (Months 1–4)**<br>*Immediate Software MVP* | **Module C (Pillars C1, C2, C3):** Proxy EOB Alerting & Home Health Verification | Medicare Advantage Plans, Medicaid Managed Care Organizations (MCOs), & Compliant SNF Chains | API-driven claim verification engine that stops phantom DMEPOS and home-health payouts pre-settlement, delivering immediate ROI to insurers. |
-| **Phase 2 (Months 5–9)**<br>*Financial Integrity Layer* | **Module B (Tracks B1 & B2):** GPO Benchmark Engine + ERP E-Invoice ZK Plugin | State Medicaid Agencies (e.g., AHCCCS) & Healthcare ERP Vendors | Automated cost-report screening tool flagging above-benchmark supply markups and offering cryptographic audit safe harbors for compliant facilities. |
-| **Phase 3 (Months 10–18)**<br>*Cryptographic Floor Verification* | **Module A:** Mobile NFC + Hardware-Anchored ZK-Staffing Pilot | Forward-Looking SNF Operators, State Nursing Boards, & CMS Innovation Center | Pilot deployment replacing legacy badge timeclocks with biometric mobile NFC and ZK shift proofs to automate PBJ staffing compliance. |
+| **Hours 1 – 2** | Install `noirup` & `bbup`; write `main.nr` assertions; test valid and ghost-fraud `Prover.toml` files via CLI. | Create synthetic FHIR `ExplanationOfBenefit` JSON; configure Twilio trial SMS/Voice webhook. | Build sample cost-report CSV, GPO benchmark JSON, and corporate ownership graph JSON. |
+| **Hours 3 – 4** | Wrap `nargo execute` + `bb prove` + `bb verify` in FastAPI endpoint returning proof hex and verification status. | Build claim-flagging trigger and webhook listener that updates claim status on proxy reply. | Write comparison script flagging unit prices $> 15\%$ above GPO caps and shared LLC links. |
+| **Hours 5 – 6** | Build Split-Screen Facility Private Log vs. Auditor Public ZKP Verifier UI with preset scenarios. | Build Claims Feed UI showing live SMS dispatch and real-time `Disputed` badge updates. | Build Cost-Report X-Ray table and summary KPI cards showing total hidden markup dollars. |
+| **Hour 7** | Merge all three tabs into unified dashboard; freeze code 30 minutes early; rehearse 3-minute demo pitch. | Merge & pitch rehearsal. | Merge & pitch rehearsal. |
+
+---
+
+## 5. Post-Hackathon Scaling & Go-To-Market (GTM) Strategy
+
+Because nursing home operators resist voluntary transparency tools, commercial rollout must sequence **payer-side products first** (requiring zero facility permission) before expanding into **facility-side cryptographic compliance**.
+
+### Phase 1 (Months 1 – 3): Payer-Side Phantom Care Verification (Wedge Product)
+* **Target Customers:** Medicare Advantage Special Needs Plans (Institutional SNPs) and state Medicaid Managed Care Organizations (MCOs).
+* **Value Proposition:** Immediate hard-dollar ROI by intercepting fraudulent Part B DMEPOS, therapy, and home-health claims before reimbursement clears.
+* **GTM Motion:** Pilot with a regional Medicare Advantage plan or Home & Community-Based Services (HCBS) network using retrospective claims data to prove recovered leakage, pricing on a shared-savings or per-member-per-month (PMPM) SaaS basis.
+
+### Phase 2 (Months 4 – 9): Automated Cost-Report & Related-Party Analytics
+* **Target Customers:** State Medicaid Agencies (e.g., Arizona AHCCCS), CMS Unified Program Integrity Contractors (UPICs), and state Attorneys General Medicaid Fraud Control Units (MFCUs).
+* **Value Proposition:** Automates desk audits of annual cost reports (Form CMS-2540-24) by joining Secretary of State corporate registries, CMS PECOS ownership data, and GPO pricing benchmarks—turning weeks of manual forensic accounting into instant risk scores.
+
+### Phase 3 (Months 10 – 18): Hardware-Anchored ZKP Staffing Attestation
+* **Target Customers:** Enterprise senior-living operators seeking reputational differentiation, lower liability insurance premiums, and regulatory "Audit Safe Harbor" status, integrated via existing EHR and mobile access partners (e.g., PointClickCare, HID Mobile Access).
+* **Scaling Architecture:**
+  * Replace simulated taps with **Apple Wallet / Google Wallet NFC credentials** bound to state nursing board verifiable credentials (BBS+ signatures).
+  * Batch shift proofs using recursive ZK rollups so a 200-facility chain can publish a single daily cryptographic compliance attestation on-chain or to a state Medicaid portal in milliseconds.
+  * Partner with state Medicaid rate-setting bodies to offer streamlined audit status or quality-incentive bonuses for facilities submitting continuous ZKP staffing proofs.
