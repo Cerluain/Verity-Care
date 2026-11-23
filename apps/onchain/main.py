@@ -391,16 +391,27 @@ def get_commit(tx_hash: str):
 @app.get("/verify")
 def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
     """Return every commit matching a claim_hash (and optionally claim_type).
-    Draws from the local append-only log — authoritative for what this service has committed.
-    Backfills block_number from the chain for any match whose log row was written before
-    the tx got mined, so the UI's rehydrate flow gets a complete record in one call."""
+    Reads Postgres FIRST (the authoritative index — survives JSONL rotation on
+    demo purge); falls back to JSONL only when DB is unavailable. Backfills
+    block_number from the chain for rows that still lack one."""
     if not claim_hash:
         raise HTTPException(400, "claim_hash is required")
     if not claim_hash.startswith("0x") or len(claim_hash) != 66:
         raise HTTPException(400, "claim_hash must be 0x + 64 hex chars")
 
     matches: list[dict] = []
-    if LOG_FILE.exists():
+    # Primary: Postgres index. Survives purge rotations because Neon is the
+    # source of truth; after `bash scripts/purge.sh` this returns zero rows,
+    # which is exactly what the demo wants (clean slate → re-anchor on click).
+    try:
+        if db.enabled():
+            matches = db.find_commits(claim_hash=claim_hash, claim_type=claim_type)
+    except Exception as e:
+        print(f"[verify] db lookup failed, falling back to JSONL: {e}")
+        matches = []
+
+    # Fallback: local JSONL. Only consulted if DB is off or threw.
+    if not matches and LOG_FILE.exists():
         with LOG_FILE.open() as f:
             for line in f:
                 try:
@@ -414,7 +425,9 @@ def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
                 matches.append(row)
 
     # Backfill block numbers from the chain so the client doesn't have to poll.
-    if not MOCK and _w3 is not None:
+    # Skip the chain hop when every row already has a block number — pure DB read.
+    if (not MOCK and _w3 is not None
+            and any(not row.get("block_number") and not row.get("mocked") for row in matches)):
         for row in matches:
             if row.get("block_number") or row.get("mocked"):
                 continue

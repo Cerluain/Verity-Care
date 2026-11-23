@@ -74,8 +74,10 @@ def facilities():
 
 def _auto_anchor_signals(payload: dict, claim_type: int) -> dict:
     """verity_service auto-anchors every analytics signal card so the investigator
-    never clicks 'commit on-chain'. Runs server-side, best-effort: failures leave
-    the card un-anchored (UI shows 'awaiting auto-anchor')."""
+    never clicks 'commit on-chain'. Idempotent: hits the onchain service's /verify
+    which reads Postgres FIRST (cheap, no chain RPC), then JSONL fallback. Only
+    cards that have never been committed trigger a fresh /commit (one real Base
+    Sepolia tx). After the first facility click each refetch is a pure DB read."""
     signals = (payload or {}).get("signals") or []
     if not signals:
         return payload
@@ -89,8 +91,7 @@ def _auto_anchor_signals(payload: dict, claim_type: int) -> dict:
             continue
         clean = {k: v for k, v in card.items() if not k.startswith("_") and k != "chain_commit"}
         claim_hash = "0x" + _h.sha256(json.dumps(canon(clean), separators=(",", ":")).encode()).hexdigest()
-        # Peek the local verity-service log: if we've already committed this hash,
-        # attach the record without re-hitting chain. Keeps refresh idempotent.
+        # Cache check: /verify hits Postgres first. No chain RPC in the hot path.
         try:
             v = _http.get(f"{ONCHAIN_SERVICE_URL}/verify",
                           params={"claim_hash": claim_hash, "claim_type": claim_type}, timeout=5)
@@ -105,8 +106,7 @@ def _auto_anchor_signals(payload: dict, claim_type: int) -> dict:
                 continue
         except Exception:
             pass
-        # Fire a fresh commit (fire-and-forget — chain mines async, block_number
-        # backfills on next /verify read).
+        # First-ever request for this card. Fire a single real commit.
         try:
             r = _http.post(f"{ONCHAIN_SERVICE_URL}/commit",
                            json={"claim_type": claim_type, "claim_hash": claim_hash}, timeout=10)
@@ -119,7 +119,7 @@ def _auto_anchor_signals(payload: dict, claim_type: int) -> dict:
                     "mocked": m.get("mocked", False), "claim_hash": claim_hash,
                 }
         except Exception:
-            pass  # card stays un-anchored; UI shows "awaiting auto-anchor"
+            pass
     return payload
 
 
