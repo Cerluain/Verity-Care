@@ -998,7 +998,7 @@ async def facility_inventory_snapshot(
         raise HTTPException(413, "image too large (10 MB max)")
     image_sha = hashlib.sha256(raw).hexdigest()
     mime = image.content_type or "image/jpeg"
-    fx = _load_fixture(facility_id)
+    fx = _load_fixture(facility_id, period=period)
     image_cid = _pinata_upload_file(f"{facility_id}-inv.jpg", raw, mime)
     req = InventoryCommitRequest(
         facility_id=facility_id,
@@ -1069,9 +1069,13 @@ def drug_disparity(facility_id: str):
     snapshots = list_inventory(facility_id=facility_id, limit=1)
     if not snapshots:
         # No live upload yet — use the staged fixture directly so the UI
-        # has something to show on first paint.
+        # has something to show on first paint. Prefer the LATEST dated
+        # fixture (so Mi Casa drug-level view defaults to Nov, not the
+        # un-dated base from months ago).
         try:
-            fx = _load_fixture(facility_id)
+            periods = _fixture_periods(facility_id)
+            latest = periods[-1] if periods else None
+            fx = _load_fixture(facility_id, period=latest)
             snapshot = {"line_items": fx["line_items"],
                         "inventory_snapshots": fx["inventory_snapshots"],
                         "period": fx["period"], "staged_only": True,
