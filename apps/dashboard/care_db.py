@@ -133,19 +133,10 @@ def _plan(r: dict) -> list[tuple]:
     return p
 
 
-# Morning history already checked in today (before the 12:30 demo clock).
-# Deliberate gaps: Rosa's 10:30 PT (billed, no check-in) and Walter's breakfast.
-SEED_DONE = {
-    "res-rosa": [("vitals-am", "LPN-0412", "07:34", "BP 132/78 · glucose 148"), ("insulin-am", "RN-1187", "07:48", None),
-                 ("meds-am", "RN-1187", "08:05", None), ("breakfast", "CNA-2231", "09:06", "Ate about 75%")],
-    "res-walter": [("vitals-am", "LPN-0412", "07:40", "BP 144/86"), ("meds-am", "RN-1187", "08:10", None)],
-    "res-mae": [("vitals-am", "LPN-0412", "07:46", None), ("meds-am", "RN-1187", "08:14", None),
-                ("breakfast", "CNA-2231", "09:15", "Pureed oats, all eaten"), ("pt-am", "PT-0907", "10:34", "Walked 40 ft with walker")],
-    "res-harold": [("vitals-am", "LPN-0412", "07:52", None), ("meds-am", "RN-1187", "08:02", None),
-                   ("breakfast", "CNA-2240", "09:04", None), ("pt-am", "PT-0907", "11:02", None)],
-    "res-gloria": [("vitals-am", "LPN-0412", "07:58", "Glucose 162"), ("insulin-am", "RN-1187", "08:01", None),
-                   ("meds-am", "RN-1187", "08:06", None), ("breakfast", "CNA-2240", "09:10", None)],
-}
+# By default nothing is pre-checked. Every item on the plan must be photo-verified
+# by staff before it moves from 'upcoming/not_verified' → 'verified' on the guardian
+# timeline. Keeps the demo honest: if you want green ticks, you have to take photos.
+SEED_DONE: dict = {}
 
 
 def _seed(db: sqlite3.Connection) -> None:

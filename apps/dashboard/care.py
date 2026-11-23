@@ -299,4 +299,11 @@ def reset():
             _db.close()
             _db = None
     care_db.reset()
-    return {"ok": True}
+    # Also nuke the photo cache so the demo starts with zero uploaded images.
+    if PHOTOS.exists():
+        for p in PHOTOS.glob("*"):
+            try:
+                p.unlink()
+            except Exception:
+                pass
+    return {"ok": True, "photos_cleared": True}
