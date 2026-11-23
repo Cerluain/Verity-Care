@@ -338,11 +338,56 @@
           <template x-if="shiftSignals.length">
             <div class="mt-6 space-y-3">
               <template x-for="c in shiftSignals" :key="c.signal_id">
-                <div class="bg-white border border-slate-200 rounded-lg p-4 flex gap-3 items-start">
-                  <span class="w-2 h-2 mt-2 rounded-full" :class="'dot-' + c.severity"></span>
-                  <div><div class="font-medium" x-text="c.headline"></div>
-                       <div class="text-sm text-slate-600" x-text="c.detail || ''"></div></div>
-                </div>
+                <article class="bg-white border border-slate-200 rounded-lg p-4">
+                  <div class="flex gap-3 items-start">
+                    <span class="w-2 h-2 mt-2 rounded-full flex-shrink-0" :class="'dot-' + c.severity"></span>
+                    <div class="flex-1">
+                      <div class="font-medium" x-text="c.headline"></div>
+                      <div class="text-sm text-slate-600" x-text="c.detail || ''"></div>
+                    </div>
+                  </div>
+                  <!-- Chain footer: same four states the SPEND cards show. -->
+                  <div class="mt-3 pt-3 border-t border-slate-100 text-xs">
+                    <template x-if="!c.chain_commit && !c._committing">
+                      <div class="flex items-center gap-3">
+                        <span class="text-slate-400">not committed on-chain</span>
+                        <button @click="commitCard(c)"
+                                class="ml-auto bg-slate-900 text-white rounded px-3 py-1 font-medium hover:bg-slate-700">Commit on-chain</button>
+                      </div>
+                    </template>
+                    <template x-if="!c.chain_commit && c._committing">
+                      <div class="pulse text-slate-500">signing &amp; broadcasting…</div>
+                    </template>
+                    <template x-if="c.chain_commit && !c.chain_commit.block_number">
+                      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="pill-yellow px-2 py-0.5 rounded font-medium pulse">⏳ pending</span>
+                        <span class="text-slate-500">signer <span class="font-medium text-slate-700" x-text="c.chain_commit.signer_role || 'facility'"></span></span>
+                        <span class="mono text-slate-400" x-text="shortHash(c.chain_commit.tx_hash)"></span>
+                        <template x-if="c.chain_commit.explorer_url">
+                          <a :href="c.chain_commit.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                        </template>
+                      </div>
+                    </template>
+                    <template x-if="c.chain_commit && c.chain_commit.block_number">
+                      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="pill-green px-2 py-0.5 rounded font-medium">✓ on-chain</span>
+                        <span class="text-slate-500">signed by <span class="font-medium text-slate-700" x-text="c.chain_commit.signer_role || 'facility'"></span></span>
+                        <span class="text-slate-500">block <span class="font-medium text-slate-700" x-text="c.chain_commit.block_number"></span></span>
+                        <span class="mono text-slate-400" x-text="shortHash(c.chain_commit.tx_hash)"></span>
+                        <template x-if="c.chain_commit.explorer_url">
+                          <a :href="c.chain_commit.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                        </template>
+                        <button @click="verifyCard(c)"
+                                class="ml-auto text-slate-600 hover:text-slate-900 border border-slate-200 rounded px-2 py-1">re-verify</button>
+                      </div>
+                    </template>
+                    <template x-if="c.chain_commit && c.chain_commit.claim_hash">
+                      <div class="mt-1 text-slate-400">
+                        claim hash <span class="mono" x-text="shortHash(c.chain_commit.claim_hash)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </article>
               </template>
             </div>
           </template>
@@ -644,8 +689,18 @@ function dashboard() {
       const id = this.selected.id;
       try { const p = await fetch('/pbj/' + id).then(r => r.ok ? r.json() : null);
             if (this.selected?.id === id) this.staffing = p; } catch (_) { this.staffing = null; }
-      try { const s = await fetch('/shift/' + id).then(r => r.json());
-            if (this.selected?.id === id) this.shiftSignals = s.signals || []; } catch (_) { this.shiftSignals = []; }
+      try {
+        const s = await fetch('/shift/' + id).then(r => r.json());
+        const sigs = (s.signals || []).map(c => ({ ...c, _committing: false, _verify: null }));
+        // Rehydrate chain state BEFORE assigning to the proxy — same pattern as SPEND.
+        await Promise.all(sigs.map(c => this.rehydrateFromChain(c)));
+        if (this.selected?.id === id) {
+          this.shiftSignals = sigs;
+          for (const c of this.shiftSignals) {
+            if (c.chain_commit?.tx_hash && !c.chain_commit.block_number) this.startPolling(c);
+          }
+        }
+      } catch (_) { this.shiftSignals = []; }
     },
 
     async loadGuardianReports() {
