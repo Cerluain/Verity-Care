@@ -264,19 +264,13 @@
                     </template>
                   </div>
                 </template>
-                <!-- Open-data provenance: each number has a verifiable source. -->
+                <!-- Open-data provenance: one link that actually works. DailyMed
+                     returns the real FDA-registered drug label — anyone can see
+                     it's a legitimate pharmaceutical, not a made-up product. -->
                 <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span class="uppercase tracking-wider text-slate-400">sources</span>
-                  <template x-if="t.ndc">
-                    <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.ndc)"
-                       target="_blank" class="text-blue-600 hover:underline font-medium">DailyMed label ↗</a>
-                  </template>
+                  <span class="uppercase tracking-wider text-slate-400">source</span>
                   <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.search_name || t.display_name)"
-                     target="_blank" class="text-blue-600 hover:underline">search by name ↗</a>
-                  <a href="https://data.medicaid.gov/dataset/dfa2ab14-06c2-457a-9e36-5cb6d80f8d93"
-                     target="_blank" class="text-blue-600 hover:underline">CMS NADAC dataset ↗</a>
-                  <a href="https://openpaymentsdata.cms.gov/"
-                     target="_blank" class="text-blue-600 hover:underline">OpenPayments ↗</a>
+                     target="_blank" class="text-blue-600 hover:underline font-medium">View FDA label ↗</a>
                   <span class="text-slate-400">· NDC <span class="mono" x-text="t.ndc || '—'"></span></span>
                 </div>
               </article>
