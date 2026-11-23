@@ -216,9 +216,6 @@
                     <span class="w-2 h-2 rounded-full" :class="'dot-' + t.severity"></span>
                     <span class="font-medium" x-text="t.display_name"></span>
                     <span class="text-xs rounded px-1.5 py-0.5" :class="'pill-' + t.severity" x-text="t.severity"></span>
-                    <template x-if="t.is_new_vs_prev">
-                      <span class="pill-red px-1.5 py-0.5 rounded text-[10px] font-bold">UPDATED</span>
-                    </template>
                     <template x-if="t.qty_delta !== null && t.qty_delta !== undefined && t.qty_delta !== 0">
                       <span class="text-[11px] mono" :class="t.qty_delta > 0 ? 'text-red-700' : 'text-green-700'"
                             x-text="(t.qty_delta > 0 ? '+' : '') + t.qty_delta + ' vs prev'"></span>
