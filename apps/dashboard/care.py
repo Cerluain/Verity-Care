@@ -32,7 +32,7 @@ import care_db
 from care_db import _lock
 
 ONCHAIN_SERVICE_URL = os.getenv("ONCHAIN_SERVICE_URL", "http://localhost:8001")
-CARE_DEMO_TIME = os.getenv("CARE_DEMO_TIME", "12:30")   # "now" for the demo; empty -> real time
+CARE_DEMO_TIME = os.getenv("CARE_DEMO_TIME", "")   # empty -> real local time (on-time demo); "HH:MM" to pin
 PHOTOS = care_db.DB_PATH.parent / "photos"
 SERVICE_TYPE = {"meal": "meal", "medication": "medication", "therapy": "pt_session",
                 "vitals": "visit", "activity": "visit"}
@@ -239,6 +239,39 @@ async def dispute(req: Request):
     return {"id": did, "route": route, "status": status}
 
 
+# ------------------------------------------------------------------ shared demo selection
+# Links the staff app and the guardian page across devices: when a staff member signs in
+# (or opens a resident) on the phone, the guardian page on the laptop follows.
+_session: dict = {"staff_id": None, "resident_id": None}
+
+
+@router.get("/care/session")
+def get_session():
+    out = dict(_session)
+    if out["staff_id"]:
+        s = _row(db().execute("SELECT id, name, role FROM staff WHERE id=?", (out["staff_id"],)).fetchone())
+        out["staff"] = s
+        out["residents"] = [dict(x) for x in db().execute(
+            """SELECT r.id, r.name, r.room FROM residents r JOIN assignments a ON a.resident_id=r.id
+               WHERE a.staff_id=? ORDER BY r.name""", (out["staff_id"],))]
+    return out
+
+
+@router.post("/care/session")
+async def set_session(req: Request):
+    b = await req.json()
+    if "staff_id" in b:
+        sid = (b["staff_id"] or "").upper() or None
+        if sid and not db().execute("SELECT 1 FROM staff WHERE id=?", (sid,)).fetchone():
+            raise HTTPException(404, "Staff ID not found")
+        if sid != _session["staff_id"]:
+            _session["resident_id"] = None
+        _session["staff_id"] = sid
+    if "resident_id" in b:
+        _session["resident_id"] = b["resident_id"] or None
+    return get_session()
+
+
 # ------------------------------------------------------------------ staff side
 @router.get("/care/staff/{sid}")
 def staff_login(sid: str):
@@ -249,9 +282,9 @@ def staff_login(sid: str):
     res = []
     for r in db().execute("""SELECT r.id, r.name, r.room, r.age FROM residents r
                              JOIN assignments a ON a.resident_id=r.id WHERE a.staff_id=? ORDER BY r.room""", (s["id"],)):
-        tasks = [i for i in _items(r["id"], _today()) if i["role"] == s["role"]]
-        res.append({**dict(r), "open": sum(t["status"] in ("not_verified", "upcoming") for t in tasks),
-                    "due": sum(t["status"] == "not_verified" for t in tasks), "total": len(tasks)})
+        tasks = [i for i in _items(r["id"], _today()) if i["owner"] == s["id"]]
+        res.append({**dict(r), "open": sum(t["status"] in ("due", "delayed", "not_verified", "upcoming") for t in tasks),
+                    "due": sum(t["status"] in ("due", "delayed", "not_verified") for t in tasks), "total": len(tasks)})
     return {"staff": s, "residents": res, "facility": care_db.FACILITY_NAME, "demo_time": _now_hhmm()}
 
 
@@ -263,7 +296,7 @@ def staff_tasks(sid: str, rid: str):
     r = _resident(rid)
     return {"resident": {k: r[k] for k in ("id", "name", "room", "age")},
             "allergies": r["profile"]["allergies"],
-            "tasks": [i for i in _items(rid, _today()) if i["role"] == s["role"]]}
+            "tasks": [i for i in _items(rid, _today()) if i["owner"] == s["id"]]}
 
 
 @router.post("/care/events")
@@ -380,6 +413,7 @@ def reports(facility_id: str):
 @router.post("/care/reset")
 def reset():
     global _db
+    _session.update({"staff_id": None, "resident_id": None})
     with _lock:
         if _db is not None:
             _db.close()
@@ -393,3 +427,75 @@ def reset():
             except Exception:
                 pass
     return {"ok": True, "photos_cleared": True}
+
+
+# ------------------------------------------------------------------ demo seed
+# Re-times every care task around "now" (or ?at=HH:MM) so the demo always looks like
+# mid-shift: morning done (seeded, placeholder photos, NOT on-chain), a couple missed,
+# 2 tasks due for Priya + 2 for Marcus right after T, the rest later.
+# Offsets are minutes from T.   D = seeded done · M = missed (no photo) · DUE · U = upcoming
+SEED_PLAN = {
+    "res-rosa": [("vitals-am", -200, "D", "BP 132/78 · glucose 148"), ("insulin-am", -185, "D", None),
+                 ("meds-am", -180, "D", None), ("breakfast", -160, "D", "Ate about 75%"),
+                 ("pt-am", -135, "M", None),                       # billed therapy, never verified
+                 ("lunch", -25, "D", "Ate half"), ("insulin-noon", 5, "DUE", None),       # Priya due #1
+                 ("activity", 90, "U", None), ("ot-pm", 150, "U", None),
+                 ("dinner", 300, "U", None), ("meds-pm", 450, "U", None)],
+    "res-walter": [("vitals-am", -190, "D", "BP 144/86"), ("breakfast", -70, "M", None),  # Marcus missed
+                   ("lunch", 6, "DUE", None),                                             # Marcus due #1
+                   ("meds-am", 8, "DUE", None),                                           # Priya due #2
+                   ("activity", 100, "U", None), ("dinner", 310, "U", None), ("meds-pm", 440, "U", None)],
+    "res-mae": [("vitals-am", -195, "D", None), ("meds-am", -175, "D", None),
+                ("breakfast", -150, "D", "Pureed oats, all eaten"), ("pt-am", -100, "D", "Walked 40 ft with walker"),
+                ("lunch", 12, "DUE", None),                                               # Marcus due #2
+                ("activity", 110, "U", None), ("ot-pm", 160, "U", None),
+                ("dinner", 305, "U", None), ("meds-pm", 455, "U", None)],
+}
+
+
+def _hhmm(minutes: int) -> str:
+    minutes = max(0, min(23 * 60 + 59, minutes))
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+@router.post("/care/seed")
+def seed(at: str | None = None):
+    """Reset + re-time the demo day around real time (or ?at=HH:MM)."""
+    if at:
+        try:
+            h, m = (int(x) for x in at.split(":"))
+        except Exception:
+            raise HTTPException(400, "at must be HH:MM")
+    else:
+        now = datetime.now()
+        h, m = now.hour, now.minute
+    t = h * 60 + m
+    reset()
+    today = _today()
+    local_tz = datetime.now().astimezone().tzinfo
+    staff_for = {x["id"]: x["owner"] for x in db().execute("SELECT id, owner FROM care_plan")}
+    summary = {"T": _hhmm(t), "done": 0, "missed": 0, "due": [], "upcoming": 0}
+    with _lock:
+        for rid, rows in SEED_PLAN.items():
+            for pid, off, kind, note in rows:
+                full = f"{rid}:{pid}"
+                sched = _hhmm(t + off)
+                db().execute("UPDATE care_plan SET time=? WHERE id=?", (sched, full))
+                if kind == "D":
+                    cap_min = t + off + 2
+                    cap = datetime.now(local_tz).replace(hour=max(0, cap_min) // 60 % 24, minute=max(0, cap_min) % 60,
+                                                         second=0, microsecond=0).isoformat()
+                    cat = db().execute("SELECT category FROM care_plan WHERE id=?", (full,)).fetchone()[0]
+                    db().execute("""INSERT INTO check_ins (id, plan_item_id, resident_id, staff_id, day, captured_at,
+                                    note, seeded, photo_url) VALUES (?,?,?,?,?,?,?,1,?)""",
+                                 (f"seed-{rid}-{pid}", full, rid, staff_for[full], today, cap, note,
+                                  f"/static/seed/{cat}.svg"))
+                    summary["done"] += 1
+                elif kind == "M":
+                    summary["missed"] += 1
+                elif kind == "DUE":
+                    summary["due"].append(f"{staff_for[full]} → {rid} {pid} @ {sched}")
+                else:
+                    summary["upcoming"] += 1
+        db().commit()
+    return summary

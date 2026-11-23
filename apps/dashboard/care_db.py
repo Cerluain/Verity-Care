@@ -32,7 +32,7 @@ CREATE TABLE staff (
 CREATE TABLE assignments (staff_id TEXT, resident_id TEXT, PRIMARY KEY (staff_id, resident_id));
 CREATE TABLE care_plan (
   id TEXT PRIMARY KEY, resident_id TEXT, time TEXT, category TEXT, title TEXT, detail TEXT,
-  role TEXT, billed TEXT);
+  role TEXT, billed TEXT, owner TEXT);
 CREATE TABLE check_ins (
   id TEXT PRIMARY KEY, plan_item_id TEXT, resident_id TEXT, staff_id TEXT, day TEXT,
   captured_at TEXT, note TEXT, seeded INT DEFAULT 0, photo_url TEXT, photo_sha256 TEXT,
@@ -48,11 +48,8 @@ CREATE TABLE history (
 # --------------------------------------------------------------------------- seed data
 STAFF = [
     ("RN-1187",  "Priya S.",  "RN",  "Day 7a–7p"),
-    ("LPN-0412", "Marcus L.", "LPN", "Day 7a–3p"),
-    ("CNA-2231", "Tasha W.",  "CNA", "Day 7a–3p"),
-    ("CNA-2240", "Omar F.",   "CNA", "Day 7a–3p"),
-    ("PT-0907",  "Kevin O.",  "PT",  "Day 8a–4p"),
-    ("OT-0310",  "Ana M.",    "OT",  "Day 9a–5p"),
+    ("LPN-0412", "Marcus L.", "LPN", "Day 7a–7p"),
+    ("PT-0907",  "Kevin O.",  "PT",  "Day 8a–4p"),   # therapy owner; not a demo login
 ]
 
 RESIDENTS = [
@@ -83,29 +80,26 @@ RESIDENTS = [
      "therapy": ["pt", "ot"], "insulin": False, "diet": "Pureed, thickened liquids",
      "physician": "Dr. A. Ruiz (synthetic)", "billing": {"pt_billed": 20, "pt_verified": 19, "ot_billed": 15, "ot_verified": 15},
      "history": [("2026-09-21", "admission", "Admitted for stroke rehab", "Short-stay Medicare Part A")]},
-    {"id": "res-harold", "name": "Harold B.", "age": 91, "room": "115B", "admitted": "2023-12-05",
-     "guardian": ("Susan B.", "daughter"),
-     "conditions": ["Parkinson's disease", "Fall risk"], "allergies": ["Latex"],
-     "meds": [("Carbidopa/levodopa", "25/100 mg", "08:00 / 14:00 / 20:00")],
-     "therapy": ["pt"], "insulin": False, "diet": "Regular", "physician": "Dr. M. Chen (synthetic)",
-     "billing": {"pt_billed": 12, "pt_verified": 12},
-     "history": [("2023-12-05", "admission", "Admitted for long-term care", ""),
-                 ("2026-07-03", "incident", "Fall in hallway, bruised arm", "Family notified same day")]},
-    {"id": "res-gloria", "name": "Gloria R.", "age": 85, "room": "203A", "admitted": "2025-07-30",
-     "guardian": ("Miguel R.", "son"),
-     "conditions": ["COPD", "Type 2 diabetes (insulin)"], "allergies": [],
-     "meds": [("Insulin lispro", "4 units", "with meals"), ("Metformin", "500 mg", "08:00 / 17:30")],
-     "therapy": [], "insulin": True, "diet": "Diabetic", "physician": "Dr. A. Ruiz (synthetic)",
-     "billing": {}, "history": [("2025-07-30", "admission", "Admitted for long-term care", "")]},
+
 ]
 
-ASSIGN = {  # staff -> residents
-    "RN-1187": ["res-rosa", "res-walter", "res-mae", "res-harold", "res-gloria"],
-    "LPN-0412": ["res-rosa", "res-walter", "res-mae", "res-harold", "res-gloria"],
-    "CNA-2231": ["res-rosa", "res-walter", "res-mae"],
-    "CNA-2240": ["res-harold", "res-gloria"],
-    "PT-0907": ["res-rosa", "res-mae", "res-harold"],
-    "OT-0310": ["res-rosa", "res-mae"],
+# Who does each task. Rosa = Priya, Mae = Marcus, Walter is shared
+# (Priya: medications; Marcus: vitals, meals, activity). Therapy = the physical therapist.
+NURSE = {"res-rosa": "RN-1187", "res-mae": "LPN-0412"}
+
+
+def _owner(rid: str, category: str) -> str:
+    if category == "therapy":
+        return "PT-0907"
+    if rid == "res-walter":
+        return "RN-1187" if category == "medication" else "LPN-0412"
+    return NURSE[rid]
+
+
+ASSIGN = {  # staff -> residents (derived from task owners)
+    "RN-1187": ["res-rosa", "res-walter"],
+    "LPN-0412": ["res-walter", "res-mae"],
+    "PT-0907": ["res-rosa", "res-mae"],
 }
 
 
@@ -156,8 +150,8 @@ def _seed(db: sqlite3.Connection) -> None:
         g = r["guardian"]
         db.execute("INSERT INTO guardians VALUES (?,?,?,?,?)", ("g-" + r["id"][4:], r["id"], g[0], g[1], "(555) 010-0000"))
         for pid, t, cat, title, detail, role, billed in _plan(r):
-            db.execute("INSERT INTO care_plan VALUES (?,?,?,?,?,?,?,?)",
-                       (f"{r['id']}:{pid}", r["id"], t, cat, title, detail, role, billed))
+            db.execute("INSERT INTO care_plan VALUES (?,?,?,?,?,?,?,?,?)",
+                       (f"{r['id']}:{pid}", r["id"], t, cat, title, detail, role, billed, _owner(r["id"], cat)))
         for d, kind, title, detail in r["history"]:
             db.execute("INSERT INTO history VALUES (?,?,?,?,?)", (r["id"], d, kind, title, detail))
         for i, (pid, sid, t, note) in enumerate(SEED_DONE.get(r["id"], [])):

@@ -34,8 +34,8 @@
           <div class="text-xs text-slate-500">Signed in as <span x-text="tl.resident.guardian.name + ' (synthetic), ' + tl.resident.guardian.relation"></span></div>
         </div>
         <div class="ml-auto flex items-center gap-2 text-xs">
-          <span class="text-slate-500">Demo: viewing</span>
-          <select x-model="residentId" @change="switchResident()" class="border border-slate-300 rounded-lg px-2 py-1 bg-white">
+          <span class="text-slate-500">Patient</span>
+          <select x-model="residentId" @change="pickResident()" class="border border-slate-300 rounded-lg px-2 py-1 bg-white">
             <template x-for="r in residents"><option :value="r.id" x-text="r.name" :selected="r.id === residentId"></option></template>
           </select>
         </div>
@@ -143,15 +143,15 @@
           <template x-if="!tl.before_go_live">
             <div>
               <div class="grid grid-cols-5 gap-3 my-4">
-                <div class="rounded-2xl bg-green-50 border border-green-100 p-3"><div class="text-2xl font-bold text-green-700" x-text="tl.counts.verified + (tl.counts.verified_late || 0)"></div><div class="text-xs text-green-800">verified</div></div>
-                <div class="rounded-2xl bg-amber-50 border border-amber-100 p-3"><div class="text-2xl font-bold text-amber-700" x-text="tl.counts.due || 0"></div><div class="text-xs text-amber-800">due now</div></div>
-                <div class="rounded-2xl bg-orange-50 border border-orange-200 p-3"><div class="text-2xl font-bold text-orange-700" x-text="tl.counts.delayed || 0"></div><div class="text-xs text-orange-800">delayed</div></div>
-                <div class="rounded-2xl bg-red-50 border border-red-100 p-3"><div class="text-2xl font-bold text-red-700" x-text="tl.counts.disputed"></div><div class="text-xs text-red-800">disputed</div></div>
-                <div class="rounded-2xl bg-white border border-slate-200 p-3"><div class="text-2xl font-bold text-slate-700" x-text="tl.counts.upcoming"></div><div class="text-xs text-slate-600">upcoming</div></div>
+                <div class="rounded-2xl bg-green-50 border border-green-100 p-3"><div class="text-2xl font-bold text-green-700" x-text="cnt('verified') + cnt('verified_late')"></div><div class="text-xs text-green-800">verified</div></div>
+                <div class="rounded-2xl bg-amber-50 border border-amber-100 p-3"><div class="text-2xl font-bold text-amber-700" x-text="cnt('due')"></div><div class="text-xs text-amber-800">due now</div></div>
+                <div class="rounded-2xl bg-orange-50 border border-orange-200 p-3"><div class="text-2xl font-bold text-orange-700" x-text="cnt('delayed')"></div><div class="text-xs text-orange-800">not verified</div></div>
+                <div class="rounded-2xl bg-red-50 border border-red-100 p-3"><div class="text-2xl font-bold text-red-700" x-text="cnt('disputed')"></div><div class="text-xs text-red-800">disputed</div></div>
+                <div class="rounded-2xl bg-white border border-slate-200 p-3"><div class="text-2xl font-bold text-slate-700" x-text="cnt('upcoming')"></div><div class="text-xs text-slate-600">upcoming</div></div>
               </div>
 
               <ol class="space-y-3">
-                <template x-for="i in tl.items" :key="i.id">
+                <template x-for="i in visibleItems()" :key="i.id">
                   <li class="bg-white rounded-2xl border shadow-sm p-4 flex gap-4"
                       :class="[flashIds.includes(i.id) ? 'flash' : '', {verified:'border-green-200', verified_late:'border-green-300 bg-green-50/30', due:'border-amber-200', delayed:'border-orange-300', disputed:'border-red-300', upcoming:'border-slate-200 opacity-70'}[i.status]]">
                     <div class="flex flex-col items-center gap-1 w-14 shrink-0">
@@ -163,7 +163,7 @@
                         <span class="font-semibold" x-text="i.title"></span>
                         <span class="text-xs rounded-full px-2 py-0.5 font-medium"
                               :class="{verified:'bg-green-100 text-green-800', verified_late:'bg-green-100 text-green-800', due:'bg-amber-100 text-amber-800', delayed:'bg-orange-100 text-orange-800', disputed:'bg-red-100 text-red-800', upcoming:'bg-slate-100 text-slate-600'}[i.status]"
-                              x-text="{verified:'✓ verified', verified_late:'⚠ verified · late', due:'⏳ due now', delayed:'⚠ delayed', disputed:'disputed', upcoming:'upcoming'}[i.status]"></span>
+                              x-text="{verified:'✓ verified', verified_late:'⚠ verified · late', due:'⏳ due now', delayed:'✗ not verified', disputed:'disputed', upcoming:'upcoming'}[i.status]"></span>
                         <template x-if="i.window">
                           <span class="text-[11px] text-slate-400" x-text="'window ±' + (i.window.before_min === i.window.after_min ? i.window.before_min + 'm' : i.window.before_min + '/' + i.window.after_min + 'm')"></span>
                         </template>
@@ -173,7 +173,7 @@
 
                       <template x-if="i.event">
                         <div class="mt-2 flex gap-3">
-                          <template x-if="i.event.photo_url && !i.event.seeded">
+                          <template x-if="i.event.photo_url">
                             <img :src="i.event.photo_url" class="w-28 h-28 object-cover rounded-xl border border-slate-200" alt="check-in photo">
                           </template>
                           <div class="text-xs text-slate-600 space-y-1 min-w-0">
@@ -183,6 +183,7 @@
                               <template x-if="chainState(i.event) === 'confirmed'"><span class="bg-green-100 text-green-800 rounded px-1.5 py-0.5">✓ on-chain<span x-text="i.event._block ? ' · block ' + i.event._block : ''"></span></span></template>
                               <template x-if="chainState(i.event) === 'pending'"><span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5 animate-pulse">⏳ anchoring…</span></template>
                               <template x-if="chainState(i.event) === 'mock'"><span class="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">on-chain (mock)</span></template>
+                              <template x-if="chainState(i.event) === 'seeded'"><span class="bg-slate-100 text-slate-500 rounded px-1.5 py-0.5">seeded demo · not on-chain</span></template>
                               <template x-if="chainState(i.event) === 'none'"><span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5">recorded, not anchored</span></template>
                               <template x-if="i.event.tx_hash"><span class="mono text-slate-400" x-text="short(i.event.tx_hash)"></span></template>
                               <template x-if="i.event.explorer_url"><a :href="i.event.explorer_url" target="_blank" class="text-blue-600 underline">Basescan ↗</a></template>
@@ -198,7 +199,7 @@
                         <div class="mt-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>. No staff photo check-in yet.<template x-if="i.billed"><b> This is billed.</b></template></div>
                       </template>
                       <template x-if="i.status === 'delayed'">
-                        <div class="mt-2 text-xs text-orange-800 bg-orange-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>, now past the ±<span x-text="i.window ? i.window.after_min : '?'"></span>-min window.<template x-if="i.billed"><b> This is billed.</b></template></div>
+                        <div class="mt-2 text-xs text-orange-800 bg-orange-50 rounded-lg px-2 py-1 inline-block"><b>Not verified.</b> Scheduled <span x-text="i.time"></span>: no staff photo within its ±<span x-text="i.window ? i.window.after_min : '?'"></span>-min window.<template x-if="i.billed"><b> This is billed.</b></template></div>
                       </template>
 
                       <template x-if="i.dispute">
@@ -264,14 +265,46 @@ function guardian() {
     residentId: new URLSearchParams(location.search).get('resident') || 'res-rosa',
     residents: [], days: [], day: null, today: null, tl: null, profile: null, staff: null,
     showHistory: false, flashIds: [], _seen: null, _blocks: {},
+    demoStaff: [{ id: 'RN-1187', name: 'Priya S.' }, { id: 'LPN-0412', name: 'Marcus L.' }],
+    staffId: '', onlyMine: true, allResidents: [], _sessionKey: '',
     async init() {
       const [rs, ds] = await Promise.all([fetch('/care/residents').then(r => r.json()), fetch('/care/days').then(r => r.json())]);
-      this.residents = rs.residents; this.days = ds.days; this.today = ds.today; this.day = ds.today;
+      this.allResidents = rs.residents; this.residents = rs.residents;
+      this.days = ds.days; this.today = ds.today; this.day = ds.today;
+      await this.syncSession();
       await this.refresh();
       try { this.staff = await fetch('/pbj/mi-casa-life-care-az').then(r => r.ok ? r.json() : null); } catch (_) {}
-      setInterval(() => this.refresh(), 3000);
+      setInterval(async () => { await this.syncSession(); await this.refresh(); }, 3000);
     },
-    async switchResident() { this.profile = null; this.showHistory = false; this._seen = null; history.replaceState(null, '', '?resident=' + this.residentId); await this.refresh(); },
+    // Follow whoever is signed in on the staff app (shared via the server, so phone -> laptop works).
+    async syncSession() {
+      let s; try { s = await fetch('/care/session').then(r => r.json()); } catch (_) { return; }
+      const key = (s.staff_id || '') + '|' + (s.resident_id || '');
+      if (key === this._sessionKey) return;
+      this._sessionKey = key;
+      this.staffId = s.staff_id || '';
+      this.residents = s.staff_id ? (s.residents || []) : this.allResidents;
+      const ids = this.residents.map(r => r.id);
+      const next = (s.resident_id && ids.includes(s.resident_id)) ? s.resident_id
+                 : (ids.includes(this.residentId) ? this.residentId : ids[0]);
+      if (next && next !== this.residentId) { this.residentId = next; this.resetView(); }
+    },
+    resetView() { this.profile = null; this.showHistory = false; this._seen = null; this.tl = this.tl; history.replaceState(null, '', '?resident=' + this.residentId); },
+    async pickStaff() {
+      await fetch('/care/session', { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({ staff_id: this.staffId || null }) });
+      this._sessionKey = ''; await this.syncSession(); await this.refresh();
+    },
+    async pickResident() {
+      await fetch('/care/session', { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({ resident_id: this.residentId }) });
+      this.resetView(); this._sessionKey = ''; await this.syncSession(); await this.refresh();
+    },
+    cnt(st) { return this.visibleItems().filter(i => i.status === st).length; },
+    staffName() { return (this.demoStaff.find(d => d.id === this.staffId) || {}).name || this.staffId; },
+    visibleItems() {
+      const its = this.tl?.items || [];
+      return its;   // patient list follows the staff app; the timeline always shows the patient's whole day
+    },
+    async switchResident() { this.resetView(); await this.refresh(); },
     async pickDay(d) { this.day = d; this._seen = null; await this.refresh(); },
     async loadProfile() { if (!this.profile) this.profile = await fetch('/care/residents/' + this.residentId).then(r => r.json()); },
     async refresh() {
@@ -287,8 +320,9 @@ function guardian() {
       this.pollChain();
     },
     chainState(e) {
+      if (e.seeded) return 'seeded';
       if (!e.tx_hash) return 'none';
-      if (e.mocked || e.seeded) return 'mock';
+      if (e.mocked) return 'mock';
       return this._blocks[e.tx_hash] ? 'confirmed' : 'pending';
     },
     async pollChain() {
@@ -320,9 +354,9 @@ function guardian() {
     },
     glance() {
       const cats = [['medication', 'Medications'], ['meal', 'Meals'], ['therapy', 'Therapy'], ['vitals', 'Vitals'], ['activity', 'Activities']];
-      const its = this.tl?.items || [];
+      const its = this.visibleItems();
       return cats.map(([c, l]) => ({ cat: c, label: l, total: its.filter(i => i.category === c).length,
-                                     done: its.filter(i => i.category === c && i.status === 'verified').length }))
+                                     done: its.filter(i => i.category === c && ['verified','verified_late'].includes(i.status)).length }))
                  .filter(g => g.total);
     },
     icon(c) { return {medication:'💊', meal:'🍽️', therapy:'🦵', activity:'🎵', vitals:'❤️'}[c] || '•'; },

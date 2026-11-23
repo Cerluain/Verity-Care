@@ -52,12 +52,29 @@ Direction is now in `AGENTS.md` and the top of `contexts/01-project-brief.md`. W
 - **Dispute routing** (agreed): facility always → State Long-Term Care Ombudsman (medication = safety, immediately; others if not fixed in 24 h) → state investigator **only if billed or 2+ disputes in 7 days**. Guardian sees the route; investigator "Guardian reports" shows only referred ones.
 - **Navigation**: floating icon panel bottom-left on every page (🕵️ 👪 🩺 ▶), a slim bar on phones. Top bars removed.
 - **Pitch** `/pitch`: one scrolling page; a single diagram on the right builds as you scroll (Medicaid → home → supplier → same owner → profit loop → cost report → rate ↑ → real case → investigator → Verity's 3 checks → family), all numbers cited.
-- **Not merged yet:** Saswata's `8a0711d` (Proof-of-Service backend) touches `index.html`, dashboard `main.py`, this file and the brief. To be merged at commit time. His Voice → "proof of service" tab rename wins.
+- **Merged** Saswata's `8a0711d` (Proof-of-Service backend) in `db878d6`. His Voice → "proof of service" tab rename won.
+
+### Round 4 (Nov 22, late night): simpler demo, real clock, staff ↔ guardian link, seed script
+Built on top of Saswata's time-window statuses (verified / verified_late / due / delayed / upcoming / disputed), which we're **keeping**, including delayed/late items in the investigator's Guardian reports (decision: "keep Saswata's way").
+
+- **Less data:** 3 synthetic residents (Rosa, Walter, Mae). 2 demo staff: **Priya S. RN-1187** and **Marcus L. LPN-0412**, plus a physical therapist (PT-0907) who owns therapy but isn't a demo login (so Rosa's billed PT stays the "never verified" story).
+- **Tasks have an owner** (`care_plan.owner`): Rosa = all Priya; Mae = all Marcus; Walter shared (Priya: medications; Marcus: vitals, meals, activity); therapy = PT-0907. Staff see only their own tasks.
+- **Real clock:** `CARE_DEMO_TIME` now defaults to empty → real local time. Missed tasks show **"✗ not verified: no staff photo within its window"** (status `delayed`, relabelled).
+- **Staff app:** sign-in shows only 2 quick buttons (Priya / Marcus with name + ID). Resident cards show a "to do" count. Labels: due now · ✗ not verified · ✓ done · ✓ done (late) · later. Fixed counts/labels for the new statuses.
+- **Staff ↔ guardian link** (works phone → laptop): `GET/POST /care/session` holds the signed-in staff + open resident. The staff app publishes it; the guardian page follows within ~3 s. Guardian header is just **Patient [▼]**, listing only that nurse's patients; the **timeline shows the patient's whole day** (all staff's tasks). No staff signed in → all 3 patients.
+- **Demo seed:** `bash scripts/seed_demo.sh` (or `--at HH:MM`) → `POST /care/seed`. It resets check-ins/disputes/photos and re-times every task around NOW:
+  - **done** 2–3 h earlier: morning tasks, seeded with **placeholder photos** (`apps/dashboard/static/seed/*.svg`), labelled "seeded demo · not on-chain" (no fake tx)
+  - **missed:** Rosa's billed physical therapy, Walter's breakfast
+  - **due at T+5…T+12:** Priya → Rosa insulin, Walter meds · Marcus → Walter lunch, Mae lunch (the 4 live photos)
+  - **upcoming:** the rest. Run it ~10 min before the demo; it prints which 4 tasks are due.
+- **Env:** `apps/onchain/.env` points at Saswata's latest contract `0x0529…5729` (claim types 1–6) with `DATABASE_URL` (Neon). `.env` files stay gitignored.
+- **Verified live:** a Priya check-in on Walter → real Base Sepolia tx from the staff wallet + real Pinata IPFS photo, and the guardian page switched to Walter on its own.
 
 ### What's next
 - [x] ~~Saswata: build the SPEND tab; use `spend_overall` for the roll-up~~ → done by Abi
 - [x] ~~Server-side anchoring of SPEND cards~~ → **not doing it**: the dashboard's "Commit on-chain" button is enough (avoids double receipts). Saswata's TODO 1/2 below are closed by this decision.
-- [ ] Saswata: confirm claim type 1 (facility signer) is right for care check-ins, or add a dedicated type
+- [x] ~~Saswata: confirm claim type for care check-ins~~ → check-ins go through his `/delivery` (claim type 5, staff wallet)
+- [ ] Before the demo: `bash scripts/seed_demo.sh` ~10 min before, phone + laptop on the same WiFi (or hotspot)
 - [ ] Leo: real PBJ → `data/spend/pbj-mock.json`
 - [ ] Together: wording pass on the Spending tab ("rephrasing")
 - [ ] Rehearse the demo arc (in `01-project-brief.md`) on the real venue WiFi with a phone on `/staff`

@@ -41,9 +41,14 @@
              class="mt-4 w-full border border-slate-300 rounded-xl px-4 py-3 mono text-lg uppercase focus:outline-none focus:ring-2 focus:ring-teal-500">
       <button @click="login()" class="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-3 font-semibold">Continue</button>
       <template x-if="err"><div class="mt-2 text-sm text-red-600" x-text="err"></div></template>
-      <div class="mt-5 text-xs text-slate-500">Demo IDs</div>
-      <div class="flex flex-wrap gap-2 mt-1">
-        <template x-for="d in demoIds"><button @click="idInput = d; login()" class="mono text-xs bg-slate-100 hover:bg-slate-200 rounded-lg px-2 py-1" x-text="d"></button></template>
+      <div class="mt-5 text-xs text-slate-500">Demo staff</div>
+      <div class="grid grid-cols-2 gap-2 mt-1">
+        <template x-for="d in demoStaff">
+          <button @click="idInput = d.id; login()" class="text-left bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl px-3 py-2">
+            <div class="font-semibold text-sm" x-text="d.name"></div>
+            <div class="mono text-xs text-slate-500" x-text="d.role + ' · ' + d.id"></div>
+          </button>
+        </template>
       </div>
     </div>
   </template>
@@ -72,7 +77,7 @@
                   <div class="font-medium" x-text="r.name + ' (synthetic)'"></div>
                   <div class="text-xs text-slate-500" x-text="'Room ' + r.room + ' · age ' + r.age"></div>
                 </div>
-                <template x-if="r.due"><span class="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-medium" x-text="r.due + ' due'"></span></template>
+                <template x-if="r.due"><span class="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-medium" x-text="r.due + ' to do'"></span></template>
                 <template x-if="!r.due && r.open"><span class="text-xs bg-slate-100 text-slate-600 rounded-full px-2 py-0.5" x-text="r.open + ' later'"></span></template>
                 <template x-if="!r.open"><span class="text-xs bg-green-100 text-green-800 rounded-full px-2 py-0.5">all done</span></template>
               </button>
@@ -84,7 +89,7 @@
       <!-- STEP 3: tasks for resident -->
       <template x-if="resident">
         <div class="space-y-3">
-          <button @click="resident = null; itemId = null; preview = null; refreshMe()" class="text-sm text-teal-700">← All residents</button>
+          <button @click="resident = null; itemId = null; preview = null; refreshMe(); publish({ resident_id: null })" class="text-sm text-teal-700">← All residents</button>
           <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
             <div class="font-semibold text-lg" x-text="resident.resident.name + ' (synthetic)'"></div>
             <div class="text-xs text-slate-500" x-text="'Room ' + resident.resident.room"></div>
@@ -95,16 +100,16 @@
 
           <div class="text-sm font-semibold text-slate-700">Your tasks</div>
           <template x-for="t in resident.tasks" :key="t.id">
-            <button @click="t.status !== 'verified' && t.status !== 'disputed' && (itemId = t.id)"
+            <button @click="!['verified','verified_late','disputed'].includes(t.status) && (itemId = t.id)"
                     class="w-full text-left rounded-xl p-3 cat flex items-center gap-3 shadow-sm"
-                    :class="['cat-' + t.category, itemId === t.id ? 'ring-2 ring-teal-600' : '', t.status === 'verified' ? 'opacity-60' : '']">
+                    :class="['cat-' + t.category, itemId === t.id ? 'ring-2 ring-teal-600' : '', ['verified','verified_late'].includes(t.status) ? 'opacity-60' : '']">
               <span class="mono text-sm" x-text="t.time"></span>
               <div class="flex-1">
                 <div class="font-medium" x-text="t.title"></div>
                 <div class="text-xs text-slate-600" x-text="t.detail"></div>
               </div>
-              <span class="text-xs font-medium" :class="{verified:'text-green-700', not_verified:'text-amber-700', upcoming:'text-slate-500', disputed:'text-red-700'}[t.status]"
-                    x-text="{verified:'✓ done', not_verified:'due', upcoming:'later', disputed:'disputed'}[t.status]"></span>
+              <span class="text-xs font-medium" :class="{verified:'text-green-700', verified_late:'text-green-700', due:'text-amber-700', delayed:'text-red-600', not_verified:'text-amber-700', upcoming:'text-slate-500', disputed:'text-red-700'}[t.status]"
+                    x-text="{verified:'✓ done', verified_late:'✓ done (late)', due:'due now', delayed:'✗ not verified', not_verified:'due', upcoming:'later', disputed:'disputed'}[t.status]"></span>
             </button>
           </template>
           <template x-if="!resident.tasks.length"><div class="text-sm text-slate-500">No tasks for your role.</div></template>
@@ -143,7 +148,7 @@
 <script>
 function staffApp() {
   return {
-    demoIds: ['RN-1187', 'LPN-0412', 'CNA-2231', 'CNA-2240', 'PT-0907', 'OT-0310'],
+    demoStaff: [{ id: 'RN-1187', name: 'Priya S.', role: 'Nurse (RN)' }, { id: 'LPN-0412', name: 'Marcus L.', role: 'Nurse (LPN)' }],
     idInput: '', err: '', me: null, resident: null, itemId: null, preview: null, note: '', busy: false, result: null,
     async init() {
       const saved = localStorageGet('vc-staff');
@@ -154,12 +159,14 @@ function staffApp() {
       const r = await fetch('/care/staff/' + encodeURIComponent(this.idInput.trim()));
       if (!r.ok) { this.err = 'Staff ID not found.'; return; }
       this.me = await r.json(); localStorageSet('vc-staff', this.me.staff.id);
+      publish({ staff_id: this.me.staff.id });
     },
-    logout() { this.me = null; this.resident = null; this.idInput = ''; localStorageSet('vc-staff', ''); },
+    logout() { this.me = null; this.resident = null; this.idInput = ''; localStorageSet('vc-staff', ''); publish({ staff_id: null }); },
     async refreshMe() { this.me = await fetch('/care/staff/' + this.me.staff.id).then(r => r.json()); },
     async openResident(r) {
       this.result = null; this.itemId = null; this.preview = null;
       this.resident = await fetch(`/care/staff/${this.me.staff.id}/tasks/${r.id}`).then(r => r.json());
+      publish({ staff_id: this.me.staff.id, resident_id: r.id });
     },
     async onPhoto(e) {
       const f = e.target.files[0]; if (!f) return;
@@ -178,6 +185,10 @@ function staffApp() {
       this.busy = false;
     },
   };
+}
+// Tell the guardian page (any device) which staff member / resident is open.
+function publish(body) {
+  fetch('/care/session', { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body) }).catch(() => {});
 }
 function localStorageGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
