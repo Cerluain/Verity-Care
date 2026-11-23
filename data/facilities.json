@@ -35,7 +35,7 @@
     "ccn": "035120",
     "state": "AZ",
     "beds": 180,
-    "severity_hint": "red",
+    "severity_hint": "yellow",
     "scenario_tag": "worthless_services",
     "parent_llc_hint": "Life Care Centers of America (Forrest L. Preston)",
     "citation": {

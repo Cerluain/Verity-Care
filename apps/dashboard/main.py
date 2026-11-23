@@ -73,60 +73,17 @@ def facilities():
 
 
 def _auto_anchor_signals(payload: dict, claim_type: int) -> dict:
-    """verity_service auto-anchors every analytics signal card so the investigator
-    never clicks 'commit on-chain'. Idempotent: hits the onchain service's /verify
-    which reads Postgres FIRST (cheap, no chain RPC), then JSONL fallback. Only
-    cards that have never been committed trigger a fresh /commit (one real Base
-    Sepolia tx). After the first facility click each refetch is a pure DB read."""
-    signals = (payload or {}).get("signals") or []
-    if not signals:
-        return payload
-    import hashlib as _h
-    def canon(o):
-        if isinstance(o, dict): return {k: canon(o[k]) for k in sorted(o)}
-        if isinstance(o, list): return [canon(x) for x in o]
-        return o
-    for card in signals:
-        if card.get("chain_commit"):
-            continue
-        clean = {k: v for k, v in card.items() if not k.startswith("_") and k != "chain_commit"}
-        claim_hash = "0x" + _h.sha256(json.dumps(canon(clean), separators=(",", ":")).encode()).hexdigest()
-        # Cache check: /verify hits Postgres first. No chain RPC in the hot path.
-        try:
-            v = _http.get(f"{ONCHAIN_SERVICE_URL}/verify",
-                          params={"claim_hash": claim_hash, "claim_type": claim_type}, timeout=5)
-            if v.status_code == 200 and v.json().get("count"):
-                m = v.json()["matches"][0]
-                card["chain_commit"] = {
-                    "tx_hash": m.get("tx_hash"), "block_number": m.get("block_number"),
-                    "signer_role": m.get("signer_role"), "signer_address": m.get("signer_address"),
-                    "explorer_url": m.get("explorer_url"), "committed_at": m.get("committed_at"),
-                    "mocked": m.get("mocked", False), "claim_hash": claim_hash,
-                }
-                continue
-        except Exception:
-            pass
-        # First-ever request for this card. Fire a single real commit.
-        try:
-            r = _http.post(f"{ONCHAIN_SERVICE_URL}/commit",
-                           json={"claim_type": claim_type, "claim_hash": claim_hash}, timeout=10)
-            if r.status_code == 200:
-                m = r.json()
-                card["chain_commit"] = {
-                    "tx_hash": m.get("tx_hash"), "block_number": m.get("block_number"),
-                    "signer_role": m.get("signer_role"), "signer_address": m.get("signer_address"),
-                    "explorer_url": m.get("explorer_url"), "committed_at": m.get("committed_at"),
-                    "mocked": m.get("mocked", False), "claim_hash": claim_hash,
-                }
-        except Exception:
-            pass
+    """Deprecated: investigator view no longer renders SPEND cards; see
+    /investigator/drug-disparity. Retained as a no-op so legacy imports work."""
     return payload
 
 
 @app.get("/spend/{facility_id}")
 def spend(facility_id: str):
     """Try live Abhi service first, fall back to his pre-built sample JSON.
-    verity_service auto-anchors each signal card before returning."""
+    The 3-signal SPEND cards are no longer rendered in the UI — they've been
+    folded into /investigator/drug-disparity. This endpoint stays for backward
+    compatibility with older clients + the facility severity badge."""
     payload = None
     try:
         r = _http.get(f"{SPEND_API_BASE}/spend/{facility_id}")
@@ -139,7 +96,7 @@ def spend(facility_id: str):
         if not sample.exists():
             raise HTTPException(404, f"no SPEND data for {facility_id}")
         payload = json.loads(sample.read_text())
-    return JSONResponse(_auto_anchor_signals(payload, claim_type=4))
+    return JSONResponse(payload)
 
 
 @app.get("/pbj/{facility_id}")

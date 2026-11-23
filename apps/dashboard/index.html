@@ -103,341 +103,161 @@
 
       <!-- SPENDING -->
       <template x-if="selected && activeTab === 'spending'">
-        <div>
-          <!-- View toggle: 3 fraud signals vs drug-level disparity -->
-          <div class="mb-4 flex items-center gap-2 text-sm">
-            <button @click="spendView = 'signals'"
-                    :class="spendView === 'signals' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'"
-                    class="rounded px-3 py-1 font-medium">3-signal fraud view</button>
-            <button @click="spendView = 'drug'; loadDrugDisparity()"
-                    :class="spendView === 'drug' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'"
-                    class="rounded px-3 py-1 font-medium">Drug-level view</button>
-            <span class="text-xs text-slate-500 ml-auto">
-              Drug-level reconciles clinical demand (residents × daily rate) against facility's own on-chain inventory + invoice attestations.
-            </span>
+        <div x-init="loadDrugDisparity(); loadSnapshotCards()" x-effect="selected; loadDrugDisparity(); loadSnapshotCards()">
+          <!-- Single unified view: drug-level disparity. The 3-signal fraud view
+               used to live behind a toggle; it's now folded into the per-drug
+               tiles below (price gap, volume vs clinical demand, markup). -->
+          <div class="mb-4 text-xs text-slate-500">
+            Drug-level reconciliation: clinical demand (residents × daily rate) vs the facility's own on-chain inventory + invoice attestations. Each drug tile = one fraud signal, chained to the signed snapshot that generated it.
           </div>
 
-          <!-- DRUG-LEVEL DISPARITY VIEW -->
-          <template x-if="spendView === 'drug'">
-            <div>
-              <template x-if="!drug.data">
-                <div class="text-slate-500 text-sm">Loading drug-level disparity…</div>
-              </template>
-              <template x-if="drug.data && drug.data.tiles && !drug.data.tiles.length">
-                <div class="text-slate-500 text-sm">No inventory snapshot for this facility yet. Facility operator needs to upload one at <a href="/facility" class="text-blue-600 underline">/facility</a>.</div>
-              </template>
+          <template x-if="!drug.data">
+            <div class="text-slate-500 text-sm">Loading drug-level disparity…</div>
+          </template>
+          <template x-if="drug.data && drug.data.tiles && !drug.data.tiles.length">
+            <div class="text-slate-500 text-sm">No inventory snapshot for this facility yet. Facility operator needs to upload one at <a href="/facility" class="text-blue-600 underline">/facility</a>.</div>
+          </template>
 
-              <!-- Roll-up banner -->
-              <template x-if="drug.data && drug.data.roll_up">
-                <div class="mb-5 rounded-lg p-5 border"
-                     :class="{red:'pill-red border-red-200', yellow:'pill-yellow border-yellow-200', green:'pill-green border-green-200'}[drug.data.roll_up.severity]">
-                  <div class="flex items-start justify-between gap-4">
-                    <div>
-                      <div class="text-xs tracking-wider uppercase opacity-80 mb-1">facility roll-up · <span x-text="drug.data.roll_up.period"></span></div>
-                      <div class="text-lg font-semibold" x-text="drug.data.roll_up.facility_name || selected.name"></div>
-                      <div class="text-xs opacity-80" x-text="drug.data.roll_up.total_beds + ' beds · ' + drug.data.roll_up.average_daily_census + ' avg daily census'"></div>
-                    </div>
-                    <div class="text-right">
-                      <div class="text-xs opacity-80">combined phantom spend</div>
-                      <div class="text-2xl font-bold mono" x-text="'$' + drug.data.roll_up.combined_phantom_spend.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})"></div>
-                    </div>
-                  </div>
-                  <div class="mt-4 grid grid-cols-3 gap-4 text-xs">
-                    <div>
-                      <div class="opacity-80">monthly drug spend</div>
-                      <div class="font-semibold text-sm" x-text="'$' + drug.data.roll_up.monthly_drug_spend.toLocaleString('en-US',{maximumFractionDigits:0})"></div>
-                    </div>
-                    <div>
-                      <div class="opacity-80">matches clinical demand (NADAC)</div>
-                      <div class="font-semibold text-sm" x-text="'$' + drug.data.roll_up.matches_clinical_demand.toLocaleString('en-US',{maximumFractionDigits:0})"></div>
-                    </div>
-                    <div>
-                      <div class="opacity-80">unaccounted + markup overpay</div>
-                      <div class="font-semibold text-sm" x-text="'$' + (drug.data.roll_up.unaccounted_excess_spend + drug.data.roll_up.markup_overpayment).toLocaleString('en-US',{maximumFractionDigits:0})"></div>
-                    </div>
-                  </div>
-                  <template x-if="drug.data.roll_up.staged_only">
-                    <div class="mt-3 text-xs opacity-80 italic">
-                      ⓘ staged fixture (no live snapshot anchored yet) — operator can anchor at <a href="/facility" class="underline">/facility</a>
-                    </div>
-                  </template>
-                  <template x-if="drug.data.roll_up.tx_hash">
-                    <div class="mt-3 text-xs flex gap-3 flex-wrap opacity-90">
-                      <span>anchored by <span class="font-medium" x-text="drug.data.roll_up.signer_role"></span></span>
-                      <template x-if="drug.data.roll_up.explorer_url">
-                        <a :href="drug.data.roll_up.explorer_url" target="_blank" class="text-blue-700 underline">Basescan ↗</a>
-                      </template>
-                      <template x-if="drug.data.roll_up.image_url">
-                        <a :href="drug.data.roll_up.image_url" target="_blank" class="text-blue-700 underline">IPFS photo ↗</a>
-                      </template>
-                      <template x-if="drug.data.roll_up.metadata_url">
-                        <a :href="drug.data.roll_up.metadata_url" target="_blank" class="text-blue-700 underline">IPFS metadata ↗</a>
-                      </template>
-                    </div>
-                  </template>
+          <!-- Roll-up banner -->
+          <template x-if="drug.data && drug.data.roll_up">
+            <div class="mb-5 rounded-lg p-5 border"
+                 :class="{red:'pill-red border-red-200', yellow:'pill-yellow border-yellow-200', green:'pill-green border-green-200'}[drug.data.roll_up.severity]">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs tracking-wider uppercase opacity-80 mb-1">facility roll-up · <span x-text="drug.data.roll_up.period"></span></div>
+                  <div class="text-lg font-semibold" x-text="drug.data.roll_up.facility_name || selected.name"></div>
+                  <div class="text-xs opacity-80" x-text="drug.data.roll_up.total_beds + ' beds · ' + drug.data.roll_up.average_daily_census + ' avg daily census'"></div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs opacity-80">combined phantom spend</div>
+                  <div class="text-2xl font-bold mono" x-text="'$' + drug.data.roll_up.combined_phantom_spend.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})"></div>
+                </div>
+              </div>
+              <div class="mt-4 grid grid-cols-3 gap-4 text-xs">
+                <div>
+                  <div class="opacity-80">monthly drug spend</div>
+                  <div class="font-semibold text-sm" x-text="'$' + drug.data.roll_up.monthly_drug_spend.toLocaleString('en-US',{maximumFractionDigits:0})"></div>
+                </div>
+                <div>
+                  <div class="opacity-80">matches clinical demand (NADAC)</div>
+                  <div class="font-semibold text-sm" x-text="'$' + drug.data.roll_up.matches_clinical_demand.toLocaleString('en-US',{maximumFractionDigits:0})"></div>
+                </div>
+                <div>
+                  <div class="opacity-80">unaccounted + markup overpay</div>
+                  <div class="font-semibold text-sm" x-text="'$' + (drug.data.roll_up.unaccounted_excess_spend + drug.data.roll_up.markup_overpayment).toLocaleString('en-US',{maximumFractionDigits:0})"></div>
+                </div>
+              </div>
+              <template x-if="drug.data.roll_up.staged_only">
+                <div class="mt-3 text-xs opacity-80 italic">
+                  ⓘ staged fixture (no live snapshot anchored yet) — operator can anchor at <a href="/facility" class="underline">/facility</a>
                 </div>
               </template>
+            </div>
+          </template>
 
-              <!-- Per-drug tiles -->
-              <div class="space-y-3">
-                <template x-for="t in (drug.data?.tiles || [])" :key="t.drug">
-                  <article class="bg-white border rounded-lg p-4 shadow-sm"
-                           :class="{red:'border-red-200', yellow:'border-amber-200', green:'border-green-200'}[t.severity]">
-                    <div class="flex items-start justify-between gap-4 mb-2">
-                      <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full" :class="'dot-' + t.severity"></span>
-                        <span class="font-medium" x-text="t.display_name"></span>
-                        <span class="text-xs rounded px-1.5 py-0.5" :class="'pill-' + t.severity" x-text="t.severity"></span>
-                        <span class="text-xs text-slate-400 mono" x-text="t.ndc || ''"></span>
-                      </div>
-                      <div class="text-right text-xs text-slate-500">
-                        line total <span class="font-medium text-slate-800 mono" x-text="'$' + t.line_total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"></span>
-                      </div>
-                    </div>
-                    <div class="grid grid-cols-5 gap-3 text-xs">
-                      <div>
-                        <div class="text-slate-500">residents on drug</div>
-                        <div class="font-semibold text-slate-800 mono" x-text="t.residents_on_drug"></div>
-                        <div class="text-slate-400" x-text="'rate ' + t.rate_per_user_per_day + ' ' + t.unit + '/day'"></div>
-                      </div>
-                      <div>
-                        <div class="text-slate-500">expected / mo</div>
-                        <div class="font-semibold text-slate-800 mono" x-text="t.expected_monthly_qty"></div>
-                        <div class="text-slate-400">clinical</div>
-                      </div>
-                      <div>
-                        <div class="text-slate-500">invoiced</div>
-                        <div class="font-semibold text-slate-800 mono" x-text="t.invoiced_qty"></div>
-                        <div class="text-slate-400" x-text="'@$' + t.unit_price.toFixed(2)"></div>
-                      </div>
-                      <div>
-                        <div class="text-slate-500">on-hand Δ</div>
-                        <div class="font-semibold text-slate-800 mono" x-text="t.inventory_start + '→' + t.inventory_end"></div>
-                        <div class="text-slate-400" x-text="'implied ' + t.implied_consumption"></div>
-                      </div>
-                      <div>
-                        <div class="text-slate-500">disparity</div>
-                        <div class="font-semibold mono" :class="t.excess_qty > 0 ? 'text-red-700' : 'text-slate-800'"
-                             x-text="(t.excess_qty > 0 ? '+' : '') + t.excess_qty + ' ' + t.unit"></div>
-                        <div class="text-slate-400" x-text="t.markup_x + 'x NADAC'"></div>
-                      </div>
-                    </div>
-                    <template x-if="t.severity !== 'green' && (t.excess_spend > 0 || t.markup_overpay > 0)">
-                      <div class="mt-3 pt-3 border-t border-slate-100 text-xs flex gap-4 text-red-700">
-                        <template x-if="t.excess_qty > 0">
-                          <span>excess spend <span class="font-semibold mono" x-text="'$' + t.excess_spend.toLocaleString('en-US',{maximumFractionDigits:0})"></span></span>
-                        </template>
-                        <template x-if="t.markup_overpay > 0">
-                          <span>markup overpayment <span class="font-semibold mono" x-text="'$' + t.markup_overpay.toLocaleString('en-US',{maximumFractionDigits:0})"></span></span>
-                        </template>
-                      </div>
+          <!-- Monthly snapshot strip: one card per on-chain inventory commit -->
+          <template x-if="snapshotCards && snapshotCards.length">
+            <div class="mb-5">
+              <div class="text-xs tracking-wider uppercase text-slate-500 mb-2">on-chain inventory snapshots</div>
+              <div class="grid grid-cols-3 gap-3">
+                <template x-for="s in snapshotCards" :key="s.tx_hash || s.period">
+                  <article class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm flex flex-col">
+                    <template x-if="s.image_url && s.pin_mode === 'pinata'">
+                      <a :href="s.image_url" target="_blank" class="block bg-slate-50 aspect-[4/5] overflow-hidden">
+                        <img :src="s.image_url" :alt="s.period" class="w-full h-full object-cover">
+                      </a>
                     </template>
+                    <template x-if="!(s.image_url && s.pin_mode === 'pinata')">
+                      <div class="bg-slate-50 aspect-[4/5] flex items-center justify-center text-xs text-slate-400 p-3 text-center" x-text="s.image_cid || '(no photo)'"></div>
+                    </template>
+                    <div class="p-3 text-xs space-y-1 flex-1">
+                      <div class="flex items-center gap-2">
+                        <span class="font-semibold text-slate-800 mono" x-text="s.period"></span>
+                        <template x-if="s.block_number">
+                          <span class="pill-green px-1.5 py-0.5 rounded text-[10px]">✓ block <span x-text="s.block_number"></span></span>
+                        </template>
+                        <template x-if="!s.block_number && !s.mocked">
+                          <span class="pill-yellow px-1.5 py-0.5 rounded text-[10px] pulse">pending</span>
+                        </template>
+                      </div>
+                      <div class="text-slate-600 truncate" x-text="s.supplier || '—'"></div>
+                      <div class="text-slate-500 mono" x-text="'$' + (s.receipt_total || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"></div>
+                      <div class="pt-1 flex items-center gap-2 text-[11px]">
+                        <template x-if="s.explorer_url">
+                          <a :href="s.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                        </template>
+                        <template x-if="s.metadata_url">
+                          <a :href="s.metadata_url" target="_blank" class="text-blue-600 hover:underline">metadata ↗</a>
+                        </template>
+                        <span class="text-slate-400 mono truncate" x-text="s.tx_hash ? (s.tx_hash.slice(0,8) + '…' + s.tx_hash.slice(-4)) : ''"></span>
+                      </div>
+                    </div>
                   </article>
                 </template>
               </div>
-            </div>
-          </template>
-
-          <!-- 3-SIGNAL FRAUD VIEW (existing) -->
-          <template x-if="spendView === 'signals'">
-            <div>
-          <!-- Verdict banner from the spend_overall card -->
-          <template x-if="!loadingSpend && spendOverall()">
-            <div class="mb-5 rounded-lg p-4 flex items-center gap-3"
-                 :class="'pill-' + spendOverall().severity">
-              <span class="w-3 h-3 rounded-full" :class="'dot-' + spendOverall().severity"></span>
-              <div>
-                <div class="font-semibold" x-text="spendOverall().headline"></div>
-                <div class="text-xs opacity-80">Red only when all three checks agree: price gap, shared ownership, impossible volume.</div>
+              <div class="mt-2 text-[11px] text-slate-500">
+                Each card is a real Base Sepolia commit signed by the facility wallet. Click any Basescan link to verify the tx + the IPFS-pinned receipt photo.
               </div>
             </div>
           </template>
-          <template x-if="loadingSpend">
-            <div class="text-slate-500">Loading SPEND signals…</div>
-          </template>
-          <template x-if="!loadingSpend && spend.signals && spend.signals.length === 0">
-            <div class="text-slate-500">No SPEND signals for this facility.</div>
-          </template>
-          <div class="space-y-4" x-show="!loadingSpend && spend.signals && spend.signals.length">
-            <template x-for="card in spend.signals" :key="card.signal_id">
-              <article class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="w-2 h-2 rounded-full" :class="'dot-' + card.severity"></span>
-                      <span class="text-xs tracking-wider uppercase text-slate-500"
-                            x-text="card.signal_type.replace(/_/g, ' ')"></span>
-                      <span class="text-xs px-1.5 py-0.5 rounded" :class="'pill-' + card.severity"
-                            x-text="card.severity"></span>
-                      <template x-if="card.data_provenance">
-                        <span class="text-xs text-slate-500" x-text="'· ' + card.data_provenance"></span>
-                      </template>
-                    </div>
-                    <div class="font-medium text-slate-900" x-text="card.headline"></div>
-                    <template x-if="card.detail">
-                      <div class="text-sm text-slate-600 mt-1" x-text="card.detail"></div>
-                    </template>
+
+          <!-- Per-drug tiles -->
+          <div class="space-y-3" x-show="drug.data?.tiles?.length">
+            <template x-for="t in (drug.data?.tiles || [])" :key="t.drug">
+              <article class="bg-white border rounded-lg p-4 shadow-sm"
+                       :class="{red:'border-red-200', yellow:'border-amber-200', green:'border-green-200'}[t.severity]">
+                <div class="flex items-start justify-between gap-4 mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full" :class="'dot-' + t.severity"></span>
+                    <span class="font-medium" x-text="t.display_name"></span>
+                    <span class="text-xs rounded px-1.5 py-0.5" :class="'pill-' + t.severity" x-text="t.severity"></span>
+                    <span class="text-xs text-slate-400 mono" x-text="t.ndc || ''"></span>
+                  </div>
+                  <div class="text-right text-xs text-slate-500">
+                    line total <span class="font-medium text-slate-800 mono" x-text="'$' + t.line_total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"></span>
                   </div>
                 </div>
-
-                <!-- Chain footer: read-only; investigator never signs SPEND cards.
-                     Signals are analytics outputs — auto-anchored by the verity_service
-                     wallet when computed. States: awaiting (not yet anchored),
-                     pending (tx broadcast), confirmed. -->
-                <div class="mt-4 pt-4 border-t border-slate-100 text-xs">
-                  <!-- not yet anchored by verity_service -->
-                  <template x-if="!card.chain_commit && !card._committing">
-                    <div class="flex items-center gap-3">
-                      <span class="text-slate-400">awaiting auto-anchor by <span class="font-medium text-slate-600">verity_service</span></span>
-                    </div>
-                  </template>
-
-                  <!-- anchoring: service is signing + broadcasting -->
-                  <template x-if="!card.chain_commit && card._committing">
-                    <div class="flex items-center gap-3">
-                      <span class="pulse text-slate-500">verity_service signing &amp; broadcasting…</span>
-                    </div>
-                  </template>
-
-                  <!-- pending: tx broadcast, awaiting block -->
-                  <template x-if="card.chain_commit && !card.chain_commit.block_number">
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span class="pill-yellow px-2 py-0.5 rounded font-medium pulse">⏳ pending</span>
-                      <span class="text-slate-500">
-                        signer <span class="font-medium text-slate-700" x-text="card.chain_commit.signer_role || 'facility'"></span>
-                      </span>
-                      <span class="mono text-slate-400" x-text="shortHash(card.chain_commit.tx_hash)"></span>
-                      <template x-if="card.chain_commit.explorer_url">
-                        <a :href="card.chain_commit.explorer_url" target="_blank"
-                           class="text-blue-600 hover:underline">Basescan ↗</a>
-                      </template>
-                      <span class="text-slate-400">· awaiting block confirmation</span>
-                    </div>
-                  </template>
-
-                  <!-- confirmed: block number in hand -->
-                  <template x-if="card.chain_commit && card.chain_commit.block_number">
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span class="pill-green px-2 py-0.5 rounded font-medium">✓ on-chain</span>
-                      <span class="text-slate-500">
-                        signed by <span class="font-medium text-slate-700" x-text="card.chain_commit.signer_role || 'facility'"></span>
-                      </span>
-                      <span class="text-slate-500">
-                        block <span class="font-medium text-slate-700" x-text="card.chain_commit.block_number"></span>
-                      </span>
-                      <span class="mono text-slate-400" x-text="shortHash(card.chain_commit.tx_hash)"></span>
-                      <template x-if="card.chain_commit.explorer_url">
-                        <a :href="card.chain_commit.explorer_url" target="_blank"
-                           class="text-blue-600 hover:underline">Basescan ↗</a>
-                      </template>
-                      <button @click="verifyCard(card)"
-                              class="ml-auto text-slate-600 hover:text-slate-900 border border-slate-200 rounded px-2 py-1">
-                        re-verify
-                      </button>
-                    </div>
-                  </template>
-
-                  <!-- Claim-hash subline, shown whenever there's any chain activity -->
-                  <template x-if="card.chain_commit && card.chain_commit.claim_hash">
-                    <div class="mt-1 text-slate-400">
-                      claim hash <span class="mono" x-text="shortHash(card.chain_commit.claim_hash)"></span>
-                      <span class="text-slate-300">· SHA-256 of card content</span>
-                    </div>
-                  </template>
+                <div class="grid grid-cols-5 gap-3 text-xs">
+                  <div>
+                    <div class="text-slate-500">residents on drug</div>
+                    <div class="font-semibold text-slate-800 mono" x-text="t.residents_on_drug"></div>
+                    <div class="text-slate-400" x-text="'rate ' + t.rate_per_user_per_day + ' ' + t.unit + '/day'"></div>
+                  </div>
+                  <div>
+                    <div class="text-slate-500">expected / mo</div>
+                    <div class="font-semibold text-slate-800 mono" x-text="t.expected_monthly_qty"></div>
+                    <div class="text-slate-400">clinical</div>
+                  </div>
+                  <div>
+                    <div class="text-slate-500">invoiced</div>
+                    <div class="font-semibold text-slate-800 mono" x-text="t.invoiced_qty"></div>
+                    <div class="text-slate-400" x-text="'@$' + t.unit_price.toFixed(2)"></div>
+                  </div>
+                  <div>
+                    <div class="text-slate-500">on-hand Δ</div>
+                    <div class="font-semibold text-slate-800 mono" x-text="t.inventory_start + '→' + t.inventory_end"></div>
+                    <div class="text-slate-400" x-text="'implied ' + t.implied_consumption"></div>
+                  </div>
+                  <div>
+                    <div class="text-slate-500">disparity</div>
+                    <div class="font-semibold mono" :class="t.excess_qty > 0 ? 'text-red-700' : 'text-slate-800'"
+                         x-text="(t.excess_qty > 0 ? '+' : '') + t.excess_qty + ' ' + t.unit"></div>
+                    <div class="text-slate-400" x-text="t.markup_x + 'x NADAC'"></div>
+                  </div>
                 </div>
-
-                <!-- Verification result -->
-                <template x-if="card._verify">
-                  <div class="mt-3 p-3 bg-slate-50 rounded text-xs mono text-slate-700">
-                    <div class="font-sans not-italic text-slate-500 mb-1">verification</div>
-                    <div>verified: <span x-text="card._verify.verified"></span></div>
-                    <div>source: <span x-text="card._verify.source"></span></div>
-                    <template x-if="card._verify.block_number !== null && card._verify.block_number !== undefined">
-                      <div>block: <span x-text="card._verify.block_number"></span></div>
+                <template x-if="t.severity !== 'green' && (t.excess_spend > 0 || t.markup_overpay > 0)">
+                  <div class="mt-3 pt-3 border-t border-slate-100 text-xs flex gap-4 text-red-700">
+                    <template x-if="t.excess_qty > 0">
+                      <span>excess spend <span class="font-semibold mono" x-text="'$' + t.excess_spend.toLocaleString('en-US',{maximumFractionDigits:0})"></span></span>
                     </template>
-                    <div>signer: <span x-text="card._verify.signer_role + ' · ' + card._verify.signer_address"></span></div>
-                    <template x-if="card._verify.note">
-                      <div class="text-slate-500 font-sans not-italic" x-text="card._verify.note"></div>
+                    <template x-if="t.markup_overpay > 0">
+                      <span>markup overpayment <span class="font-semibold mono" x-text="'$' + t.markup_overpay.toLocaleString('en-US',{maximumFractionDigits:0})"></span></span>
                     </template>
                   </div>
                 </template>
               </article>
             </template>
           </div>
-
-          <!-- Ownership graph -->
-          <template x-if="!loadingSpend && ownershipCard()">
-            <div class="mt-8 bg-white border border-slate-200 rounded-lg shadow-sm">
-              <div class="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
-                <div class="font-semibold">Who owns whom</div>
-                <span class="text-xs text-slate-500">red = facility and supplier share an owner · hover a box for details · * = illustrative name</span>
-              </div>
-              <div class="h-96" x-init="$nextTick(() => renderOwnershipGraph($el, ownershipCard().evidence.ownership_graph))"
-                   x-effect="spend.signals; $nextTick(() => renderOwnershipGraph($el, ownershipCard()?.evidence.ownership_graph))"></div>
-              <div class="px-5 py-2 text-xs text-slate-500 border-t border-slate-100"
-                   x-text="ownershipCard().evidence.ownership_graph.notes"></div>
-            </div>
-          </template>
-
-          <!-- Invoice table -->
-          <template x-if="!loadingSpend && invoiceRows().length">
-            <div class="mt-8 bg-white border border-slate-200 rounded-lg shadow-sm overflow-x-auto">
-              <div class="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
-                <div class="font-semibold">Supplier invoices → cost report</div>
-                <span class="text-xs text-slate-500">Q3 2026 · invoice rows are demo data; reference prices are real CMS NADAC</span>
-              </div>
-              <table class="w-full text-sm">
-                <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
-                  <tr>
-                    <th class="text-left px-4 py-2">Drug</th>
-                    <th class="text-left px-4 py-2">Supplier</th>
-                    <th class="text-right px-4 py-2">Qty</th>
-                    <th class="text-right px-4 py-2">Paid / unit</th>
-                    <th class="text-right px-4 py-2">Fair price</th>
-                    <th class="text-right px-4 py-2">Markup</th>
-                    <th class="text-right px-4 py-2">Qty vs need</th>
-                    <th class="text-right px-4 py-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template x-for="r in invoiceRows()" :key="r.line_id">
-                    <tr class="border-t border-slate-100"
-                        :class="(r.price_severity === 'red' || r.volume_severity === 'red') ? 'bg-red-50/50' : ''">
-                      <td class="px-4 py-2">
-                        <div class="font-medium" x-text="r.drug"></div>
-                        <div class="text-xs text-slate-400 mono" x-text="r.invoice_no + ' · ' + r.invoice_date"></div>
-                      </td>
-                      <td class="px-4 py-2">
-                        <span x-text="r.supplier"></span>
-                        <template x-if="r.related_party_supplier">
-                          <span class="ml-1 text-xs pill-red px-1.5 py-0.5 rounded">same owner</span>
-                        </template>
-                      </td>
-                      <td class="px-4 py-2 text-right" x-text="r.qty.toLocaleString() + ' ' + r.unit"></td>
-                      <td class="px-4 py-2 text-right mono" x-text="money(r.unit_price)"></td>
-                      <td class="px-4 py-2 text-right mono text-slate-500" x-text="money(r.reference_price)"></td>
-                      <td class="px-4 py-2 text-right">
-                        <span class="px-1.5 py-0.5 rounded text-xs font-medium" :class="'pill-' + r.price_severity"
-                              x-text="r.price_ratio + '×'"></span>
-                      </td>
-                      <td class="px-4 py-2 text-right">
-                        <span class="px-1.5 py-0.5 rounded text-xs font-medium" :class="'pill-' + r.volume_severity"
-                              x-text="r.volume_ratio + '×'"></span>
-                      </td>
-                      <td class="px-4 py-2 text-right mono" x-text="'$' + r.total.toLocaleString()"></td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-              <div class="px-5 py-2 text-xs text-slate-500 border-t border-slate-100">
-                Fair price = CMS NADAC (national average acquisition cost). Markup: red &gt; 3×, yellow 1.5–3×.
-                Qty vs need = units bought ÷ what the resident census could use: red &gt; 1.5×.
-              </div>
-            </div>
-          </template>
-          <!-- /spendView === 'signals' -->
-            </div>
-          </template>
         </div>
       </template>
 
@@ -818,8 +638,8 @@ function dashboard() {
     selected: null,
     spend: { signals: [] },
     loadingSpend: false,
-    spendView: 'signals',     // 'signals' | 'drug'
     drug: { data: null, loading: false },
+    snapshotCards: [],      // one card per inventory snapshot on-chain (photo + supplier + tx)
     chain: { ok: false, chain: '?', mock: true },
     aggregate_severity: null,
     batchCommitting: false,
@@ -856,6 +676,18 @@ function dashboard() {
       this.drug.loading = false;
     },
 
+    async loadSnapshotCards() {
+      if (!this.selected) return;
+      try {
+        const id = this.selected.id;
+        const r = await fetch('/facility/inventory?facility_id=' + encodeURIComponent(id));
+        const rows = r.ok ? await r.json() : [];
+        if (this.selected?.id !== id) return;
+        // Newest first → chronological left-to-right for the pitch narrative.
+        this.snapshotCards = rows.slice().sort((a,b) => (a.period||'').localeCompare(b.period||''));
+      } catch(_) { this.snapshotCards = []; }
+    },
+
     async select(f) {
       // Clear pollers from the previous facility.
       for (const id of Object.values(this._pollers)) clearInterval(id);
@@ -864,6 +696,7 @@ function dashboard() {
       this.selected = f;
       this.spend = { signals: [] };
       this.drug = { data: null, loading: false };
+      this.snapshotCards = [];
       this.aggregate_severity = null;
       this.loadingSpend = true;
       this.pos.deliveries = [];
