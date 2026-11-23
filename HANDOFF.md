@@ -45,14 +45,19 @@ AGENTS.md
 contexts/                            # project brief + research + per-dev task lists
 ```
 
-## Chain decision — LOCKED
+## Chain decision — LOCKED & DEPLOYED
 
 **Base Sepolia** (chainId 84532).
 
 - RPC: `https://sepolia.base.org`
-- Faucet: https://portal.cdp.coinbase.com/products/faucet — email signup only, 0.05 ETH / 24h, no mainnet-balance gate.
+- Faucet: https://portal.cdp.coinbase.com/products/faucet
 - Explorer: https://sepolia.basescan.org
-- Deployed address: *filled by Dev C at H1*. Will update `shared.env.example` + this line.
+- **VerityCommit deployed at:** `0xF80621cD9EFeC0529fAb805866D84Fbb8a405f45`
+- Signer / commit wallet: `0x90ECCCBEEAeD77425399266de9D0Cc6c2EbA9B8f`
+- Deploy tx: `0x706fd2e90866ce9c1206d39d0a33187a420fdadf499f7fc54342fd5fc14aba58`
+- Verified via smoke commit: https://sepolia.basescan.org/tx/0x9d92008a58df2516aedfe9d92ede2f615cc4c73787d82fece6149ac19464c9c7 (block 62380160, status success)
+
+The deployed address is in `shared.env.example`. Point your local `.env` at it when you flip MOCK=false.
 
 Until then, **run onchain service in MOCK mode**:
 ```bash
