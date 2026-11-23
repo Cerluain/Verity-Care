@@ -1,0 +1,86 @@
+{
+  "title": "Verity Care — live demo",
+  "duration_target_seconds": 90,
+  "pre_demo_checklist": [
+    "bash scripts/purge.sh  (wipes Postgres + logs + care sqlite, re-anchors Sep + Oct)",
+    "Open Tab A: http://localhost:8000/   (investigator)",
+    "Open Tab B: http://localhost:8000/facility   (operator, period dropdown preset to 2026-11)",
+    "Hard-refresh both tabs (⌘⇧R)",
+    "Confirm Tab A SPENDING shows TWO snapshot cards (Sep + Oct), no NEW pills",
+    "Confirm Tab A CASE FILE shows TWO prior sign-offs"
+  ],
+  "scenes": [
+    {
+      "id": 1,
+      "name": "Investigator opens Mi Casa",
+      "duration_seconds": 20,
+      "tab": "A",
+      "action": "Page is already on Mi Casa by default. Click into SPENDING.",
+      "voiceover": "This is what a state Medicaid Fraud Control investigator sees when they open a nursing home. Mi Casa, Phoenix, 180 beds. Three tabs — spending, guardian reports, case file. On SPENDING, I see two months of on-chain inventory snapshots. September and October. The facility operator uploaded each invoice and signed it with their own wallet on Base Sepolia. Click any Basescan link — [click one ↗] — that's a real transaction, signed by 0xB281, which is Mi Casa's own wallet. They can't walk this back.",
+      "pitch_beat": "chain is the trust root, facility signs its own numbers"
+    },
+    {
+      "id": 2,
+      "name": "Drug-level math",
+      "duration_seconds": 15,
+      "tab": "A",
+      "action": "Scroll to the drug tiles. Hover insulin_lispro tile.",
+      "voiceover": "Below, the system reconciles each drug: residents on the drug times daily rate times 30 days gives expected monthly quantity. Compare against what they invoiced. Compare against NADAC — CMS's national fair price. Insulin already shows 2x markup in October. Hover any field — the system explains the math.",
+      "pitch_beat": "every number traces to a public source"
+    },
+    {
+      "id": 3,
+      "name": "Facility uploads November",
+      "duration_seconds": 25,
+      "tab": "B",
+      "action": "Switch to Tab B (/facility). Period dropdown already on 2026-11. Click 'Parse photo'. Line items appear. Click 'Sign & anchor'. Wait for green block pill.",
+      "voiceover": "Now watch what happens when the facility files November's invoice. I'm playing the facility admin here — in production this is a different human, different computer. Drag the receipt in. Click PARSE PHOTO — backend pins the image to IPFS, reads the line items, shows them editable. Operator corrects any OCR drift before signing. Now click SIGN AND ANCHOR. Facility wallet broadcasts to Base Sepolia. [pause 3-5 seconds] Green pill: block confirmed. That's a real tx.",
+      "pitch_beat": "two-click flow, facility-signed on chain"
+    },
+    {
+      "id": 4,
+      "name": "Investigator sees the new card",
+      "duration_seconds": 20,
+      "tab": "A",
+      "action": "Switch back to Tab A. The visibility-change listener auto-refetches. A THIRD snapshot card with red NEW pill appears. Drug tiles update with '+N vs prev' deltas.",
+      "voiceover": "Investigator didn't touch anything. The moment I come back to this tab, a third card appeared — flagged NEW. November. Clickable Basescan. Same facility wallet signed it. And every drug tile updated. Look at insulin: 3 residents on it, expected 90 vials, now invoiced 102, excess plus 12, markup 2.09x NADAC. Excess spend $602. Markup overpayment $2,669. Combined phantom spend $4,629 this month. On ONE drug in ONE facility. Multiply by the 15,000 US nursing homes. Project across a year.",
+      "pitch_beat": "cross-actor live update, fraud math visible"
+    },
+    {
+      "id": 5,
+      "name": "Case file sign-off",
+      "duration_seconds": 15,
+      "tab": "A",
+      "action": "Click CASE FILE tab. Show the 4-KPI strip + 2 prior sign-offs in the audit timeline. Click 'Sign & anchor packet'. Wait for green block.",
+      "voiceover": "When I'm ready to refer this to the state AG, I click SIGN AND ANCHOR PACKET. Backend aggregates all three snapshots plus the drug-level findings plus guardian flags into a canonical envelope, SHA-256 hashes it, ed25519 signs with the Verity Care service key, commits to Base Sepolia under claim type 3. Every past sign-off is logged — see the timeline, two prior reviews, both with real Basescan links. This is the audit trail the chain was built for.",
+      "pitch_beat": "investigator attestation is itself on-chain"
+    }
+  ],
+  "closing_beat": {
+    "duration_seconds": 10,
+    "voiceover": "One drug. One facility. Four real transactions. The facility can't deny the invoice — they signed it. The investigator can't backdate the sign-off — chain says when. And every drug tile cites a public source — CMS NADAC, FDA DailyMed — so the state AG doesn't need to trust us. Verity Care doesn't ASK facilities to be transparent. We make transparency something they already signed."
+  },
+  "fallback_if_nov_fails": [
+    "Nov upload failed mid-pitch? Stay in Tab A. Show the audit timeline on CASE FILE, point at prior sign-offs — same chain-is-source-of-truth pitch works.",
+    "If facility wallet is out of gas: bash scripts/rebalance.sh (15 seconds, auto-recovers from siblings)."
+  ],
+  "do_not_say": [
+    "mock",
+    "demo data",
+    "we would have",
+    "this is synthetic",
+    "if we had real data"
+  ],
+  "numbers_to_memorize": {
+    "mi_casa_beds": 180,
+    "insulin_residents": 3,
+    "insulin_expected_monthly": 90,
+    "insulin_nov_invoiced": 102,
+    "insulin_markup": "2.09x",
+    "insulin_excess_spend": "$602",
+    "insulin_markup_overpay": "$2,669",
+    "mi_casa_phantom_spend_monthly": "$4,629",
+    "facility_wallet": "0xB281...",
+    "us_nursing_homes": "~15,000"
+  }
+}
