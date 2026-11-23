@@ -62,26 +62,33 @@ Backup "legit variance" tile: rural WY facility with +180% markup, no ownership 
 
 State Medicaid Fraud Control Units (53 of them across states + territories). They recover ~$1B/yr nationally with spreadsheets. Secondary: Long-Term Care Ombudsman offices. Explicitly NOT consumer families in this pitch — business case is cleaner B2G.
 
-## Scope (locked)
+## Scope (locked, updated Nov 22 mid-build)
 
 **IN:**
 - Procurement / phantom-spending detection (the 3-signal fusion above).
 - Static JSON data + pre-baked fraud scenarios.
 - Signed JSON + hash evidence pack.
+- **On-chain commitment layer.** VerityCommit contract on Base Sepolia. Four claim-type signers (facility / ombudsman / verity_service / staff). Dashboard commits every signal card + exported case file + proof-of-service event. Judges click Basescan links from the UI.
+- **Proof-of-Service pillar** (replaces the Voice pillar — rejected mid-build). Staff uploads a photo of a delivered service (meal, insulin shot, visit) → image pinned to IPFS (Pinata) → metadata JSON pinned to IPFS → sha256(canonical metadata) committed on-chain via the staff wallet. Verifier can refetch metadata from IPFS and recompute the hash independently; the on-chain record proves the facility committed to that exact service event at that exact time.
 
 **OUT for tonight:**
 - Staffing-fraud module. Noted on competitive slide as "future module," not built.
-- Resident voice attestation via Vapi. Stretch only if H5 finishes clean.
+- Voice attestation (Vapi / 11Labs) — CUT mid-build. Replaced by Proof-of-Service (staff-side) which is architecturally stronger (no PHI, verifiable image hash, no transcription uncertainty).
 - Facility EHR integration (never in scope — that's the moat).
-- Real HIPAA / PHI (synthetic / illustrative only, labeled in UI).
-- Blockchain, ZK proofs, multisig. Judge-trap bait; we defend against them in Q&A.
+- Real HIPAA / PHI (pseudonymous IDs only in any UI or IPFS payload).
+- ZK proofs. Judge-trap bait; defended in Q&A.
+- Multisig. Honest "one key per signer role is correct" answer in Q&A.
 
-## Stack (locked)
+## Stack (locked, updated Nov 22 mid-build)
 
-- Frontend: plain HTML + Tailwind CDN + Alpine.js + vis-network. One `index.html`. No Next.js scaffolding.
-- Backend: FastAPI + static JSON in `/data/`. 4 endpoints.
-- Crypto: ed25519-signed JSON envelope (PyNacl, ~20 lines) + SHA-256 content hash. NO chain.
-- PDF: WeasyPrint or `window.print()`.
+- Frontend: plain HTML + Tailwind CDN + Alpine.js + vis-network. One `apps/dashboard/index.html`. No Next.js scaffolding.
+- Backend services:
+  - `apps/dashboard` (FastAPI, :8000) — serves the UI, proxies `/spend`, `/chain`, `/delivery` to other services.
+  - `apps/onchain` (FastAPI, :8001) — holds all four signing wallets + ed25519 case-file key + Pinata uploader. Every commit flows through here.
+  - `apps/phantom-spend` (Abhi's FastAPI, :8003) — SPEND signals.
+  - `apps/phantom-shift` (Leo's, :8002) — not yet shipped.
+- Crypto: Solidity `VerityCommit` on Base Sepolia (`0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb`). Four distinct signer wallets. Ed25519 envelope sig on exported case files. SHA-256 content hashes. IPFS via Pinata for proof-of-service.
+- PDF: `window.print()` on the case-file view.
 
 ## Data plan
 
@@ -120,8 +127,9 @@ See `03-demo-plan.md` §5 for the full schedule. Short version:
 - **"What about legitimate rural price variation?"** → Signal 1 alone would flag them. We require all three signals aligned for red. Our rural-WY tile shows +180% markup but no ownership overlap and matching volume → stays yellow.
 - **"HIPAA?"** → No PHI. NDC drug codes + aggregate PBJ resident-days — both already public. Patient identifiers never leave the facility.
 - **"PECOS ownership data — is it really this clean?"** → PECOS is messy and 18 months stale. Production pulls state SOS + ProPublica Nonprofit Explorer. Demo graphs are hand-authored on real reported structures. That's the real engineering work — not the UI.
-- **"Why not blockchain?"** → Chain of custody needs tamper-evidence, not decentralization. ed25519-signed JSON + published hash in 20 lines. MFCUs run on Windows laptops; a chain adds friction without evidentiary value.
-- **"Why no MetaMask / browser wallet?"** → This isn't a consumer product — there's no user signing their own asset. The claims we anchor are institutional: the facility attests to its own tap logs, the ombudsman attests to its own call logs, we attest to our own computations. Those are backend attestations by legally-responsible entities, not personal signatures. The one place a human belongs on-chain is the MFCU investigator confirming they reviewed the case — that's a passkey or hardware-wallet moment at CASEFILE export time, on the production roadmap as a 2-of-2 (investigator + service) signature.
+- **"Why not blockchain?"** → DECISION REVERSED mid-build. We DO use chain for append-only attestation anchors. Not for storage, not for payments, not for consensus. One contract, one function (`commit(uint8, bytes32)`), four distinct signer wallets so Basescan shows "separation of attestation authority" per claim type.
+- **"Why no MetaMask / browser wallet?"** → This isn't a consumer product — there's no user signing their own asset. The claims we anchor are institutional: the facility attests to its own tap logs, the ombudsman attests to its own call logs, we attest to our own computations, and staff attest to services they delivered. Those are backend attestations by legally-responsible entities, not personal signatures. The one place a human belongs on-chain is the MFCU investigator confirming they reviewed the case — that's a passkey or hardware-wallet moment at CASEFILE export time, on the production roadmap as a 2-of-2 (investigator + service) signature.
+- **"Why IPFS for the delivery photos and not S3?"** → Content addressing. The on-chain record contains `sha256(canonical(metadata))` where metadata includes the IPFS CID of the photo. If anyone changes the photo or the metadata, the CID changes and the hash no longer matches what's on-chain. S3 can't give you that property — the facility could swap the photo and the URL would still work. This is the Walmart-receipt-photo pattern applied properly: the receipt is addressable by what it IS, not where it's stored.
 
 ## Competitive matrix (for the slide)
 
@@ -131,6 +139,15 @@ See `03-demo-plan.md` §5 for the full schedule. Short version:
 | CMS Nursing Home Compare | ❌ | ❌ | Partial | ❌ |
 | LifeLoop / CarePredict | ❌ | ❌ | ❌ | ❌ |
 | MFCU manual audits | ✅ (slow) | ✅ (slow) | ✅ (slow) | They *are* the investigator |
-| **Phantom Spend** | ✅ | ✅ | ✅ | ✅ (signed + hashed) |
+| **Verity Care** | ✅ | ✅ | ✅ | ✅ (signed + hashed + chain-anchored) |
 
 Pitch line: *"Everyone else protects the resident's experience. We protect the resident's dollars. We're the first tool built for the investigator, not the family."*
+
+## Mid-build decision log (Nov 22, in build order)
+
+- Added **VerityCommit** Solidity contract + on-chain anchoring. Was explicitly OUT; teammate push to add chain made it a win: judges click Basescan links from every signal.
+- Added **three signer wallets** (facility / ombudsman / verity_service) to give distinct `committer` addresses per claim type → "separation of attestation authority."
+- Added **fourth signer (staff)** when we added Proof-of-Service.
+- **Killed Voice pillar.** Replaced with **Proof-of-Service** (staff photo + IPFS + chain commit). Architecturally stronger: no PHI, deterministic verification, Walmart-receipt-photo semantic maps cleanly.
+- **IPFS via Pinata** for Proof-of-Service metadata + images. Hash of canonical metadata is the on-chain claim. Verifier can refetch from any IPFS gateway and recompute the hash.
+- Locked **backend-signed per institution, no browser wallet.** Judge-trap answer above.

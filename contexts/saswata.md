@@ -169,6 +169,10 @@ Notes for me:
 - (Nov 22) Montana rural yellow safety tile is P0 — kills "rural thin-market" judge-trap.
 - (Nov 22) Each dev owns Q&A for their pillar; I own pitch narration + architecture Q&A.
 - (Nov 22) Signing model LOCKED: **backend wallets per legally-responsible institution** (facility / ombudsman / verity_service), one wallet per claim type. No browser wallet for TAP / SIGNAL_CARD / VOICE because those are institutional attestations, not personal. CASEFILE roadmap: 2-of-2 (MFCU investigator passkey/hardware wallet + verity_service backend) because that's the one human-in-the-loop moment. This kills the "why no MetaMask" judge question.
+- (Nov 22, mid-build) **VOICE pillar CUT, Proof-of-Service pillar ADDED.** 11Labs / voice attestation was architecturally weak (PHI risk, transcription uncertainty, no deterministic verification). Replaced with staff-side photo-of-delivery: staff takes a photo of a delivered service (meal / insulin shot / visit), the service pins the image to IPFS via Pinata, builds a metadata JSON {facility_id, patient_pseudonym, service_type, service_detail, staff_pseudonym, delivered_at, image:{cid, sha256, mime, size}}, pins the metadata to IPFS, sha256 of canonical metadata is committed on-chain with claim_type=5 signed by the STAFF wallet. Verifier can refetch metadata from any IPFS gateway and recompute the hash — this is the Walmart-receipt-photo pattern applied with content-addressing.
+- (Nov 22, mid-build) **Fourth signer added: STAFF** (`0xdbbF6AF9F46E85ee39c2448bc807A51cfc4d497B`). Funded 0.001 ETH from deployer. Signs claim_type=5 (PROOF_OF_SERVICE).
+- (Nov 22, mid-build) **Contract redeployed** at `0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb` to extend claim_type range to 1..5. Old deployment `0xF806…` is dead; everywhere references the new address.
+- (Nov 22, mid-build) **Pinata selected** as IPFS provider (free tier 1 GB, JWT-based, fast gateway). Service falls back to `bafkmock…` deterministic CIDs when no JWT is set, so UI builds without a Pinata account.
 
 ## Open questions
 

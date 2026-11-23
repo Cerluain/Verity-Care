@@ -130,6 +130,28 @@ def chain_health():
         return JSONResponse({"ok": False, "error": str(e)}, status_code=503)
 
 
+@app.post("/delivery")
+async def delivery(req: Request):
+    """Multipart proxy to apps/onchain /delivery.
+    Dashboard-side helper for the Proof-of-Service tab; keeps browser on one origin."""
+    body = await req.body()
+    r = _http.post(
+        f"{ONCHAIN_SERVICE_URL}/delivery", content=body,
+        headers={"content-type": req.headers.get("content-type", "")},
+        timeout=90.0,
+    )
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
+@app.get("/deliveries")
+def deliveries(facility_id: str | None = None, limit: int = 50):
+    params: dict = {"limit": limit}
+    if facility_id:
+        params["facility_id"] = facility_id
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/deliveries", params=params)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/chain/{tx_hash}")
 def chain_get(tx_hash: str):
     r = _http.get(f"{ONCHAIN_SERVICE_URL}/commit/{tx_hash}")

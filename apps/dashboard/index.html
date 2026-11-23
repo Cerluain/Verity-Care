@@ -375,8 +375,10 @@
         </div>
       </template>
 
-      <template x-if="selected && activeTab === 'voice'">
-        <div class="text-slate-500">VOICE pillar — 11Labs widget wiring in progress.</div>
+      <template x-if="selected && activeTab === 'proof of service'">
+        <div class="text-slate-500">
+          Staff uploads service-delivery photos here (meal, insulin, visit). Each upload → IPFS → metadata JSON → on-chain commit signed by the staff wallet. Verifier fetches metadata from IPFS and recomputes <code class="mono">sha256(canonical(metadata))</code> to match the on-chain hash. Abhi designing this view; backend endpoints <code class="mono">POST /delivery</code> and <code class="mono">GET /deliveries?facility_id=…</code> are live.
+        </div>
       </template>
 
       <template x-if="selected && activeTab === 'case file'">
@@ -389,7 +391,7 @@
 <script>
 function dashboard() {
   return {
-    tabs: ['spending', 'staffing', 'guardian reports', 'voice', 'case file'],
+    tabs: ['spending', 'staffing', 'proof of service', 'guardian reports', 'case file'],
     activeTab: 'spending',
     staffing: null,
     shiftSignals: [],
