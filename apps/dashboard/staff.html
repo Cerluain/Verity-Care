@@ -62,7 +62,7 @@
           <div class="font-semibold" x-text="me.staff.name"></div>
           <div class="text-xs text-slate-500"><span x-text="me.staff.role_label"></span> · <span class="mono" x-text="me.staff.id"></span> · <span x-text="me.staff.shift"></span></div>
         </div>
-        <div class="text-right text-xs text-slate-500">now<div class="mono text-base text-slate-800" x-text="me.demo_time"></div></div>
+        <div class="text-right text-xs text-slate-500">now<div class="mono text-base text-slate-800" x-text="to12(me.demo_time)"></div></div>
       </div>
 
       <!-- STEP 2: pick resident -->
@@ -103,7 +103,7 @@
             <button @click="!['verified','verified_late','disputed'].includes(t.status) && (itemId = t.id)"
                     class="w-full text-left rounded-xl p-3 cat flex items-center gap-3 shadow-sm"
                     :class="['cat-' + t.category, itemId === t.id ? 'ring-2 ring-teal-600' : '', ['verified','verified_late'].includes(t.status) ? 'opacity-60' : '']">
-              <span class="mono text-sm" x-text="t.time"></span>
+              <span class="mono text-xs whitespace-nowrap" x-text="to12(t.time)"></span>
               <div class="flex-1">
                 <div class="font-medium" x-text="t.title"></div>
                 <div class="text-xs text-slate-600" x-text="t.detail"></div>
@@ -187,6 +187,15 @@ function staffApp() {
   };
 }
 // Tell the guardian page (any device) which staff member / resident is open.
+function to12(t) {
+  // '07:30' or ISO timestamp -> '7:30 AM'
+  if (!t) return '';
+  let h, m;
+  const hm = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (hm) { h = +hm[1]; m = hm[2]; }
+  else { const d = new Date(t); if (isNaN(d)) return t; h = d.getHours(); m = String(d.getMinutes()).padStart(2, '0'); }
+  return ((h % 12) || 12) + ':' + m + ' ' + (h < 12 ? 'AM' : 'PM');
+}
 function publish(body) {
   fetch('/care/session', { method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body) }).catch(() => {});
 }

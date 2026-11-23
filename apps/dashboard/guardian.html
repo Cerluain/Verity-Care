@@ -128,7 +128,7 @@
               </button>
             </template>
             <div class="ml-auto shrink-0 text-xs text-slate-500 flex items-center gap-1.5 pl-3">
-              <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> live · now <span class="mono" x-text="tl.demo_time"></span>
+              <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> live · now <span class="mono" x-text="to12(tl.demo_time)"></span>
             </div>
           </div>
 
@@ -156,7 +156,7 @@
                       :class="[flashIds.includes(i.id) ? 'flash' : '', {verified:'border-green-200', verified_late:'border-green-300 bg-green-50/30', due:'border-amber-200', delayed:'border-orange-300', disputed:'border-red-300', upcoming:'border-slate-200 opacity-70'}[i.status]]">
                     <div class="flex flex-col items-center gap-1 w-14 shrink-0">
                       <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl cat-icon" :class="'cat-' + i.category" x-text="icon(i.category)"></div>
-                      <div class="mono text-xs text-slate-500" x-text="i.time"></div>
+                      <div class="mono text-[11px] text-slate-500 whitespace-nowrap" x-text="to12(i.time)"></div>
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 flex-wrap">
@@ -196,10 +196,10 @@
                       </template>
 
                       <template x-if="i.status === 'due'">
-                        <div class="mt-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>. No staff photo check-in yet.<template x-if="i.billed"><b> This is billed.</b></template></div>
+                        <div class="mt-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="to12(i.time)"></span>. No staff photo check-in yet.<template x-if="i.billed"><b> This is billed.</b></template></div>
                       </template>
                       <template x-if="i.status === 'delayed'">
-                        <div class="mt-2 text-xs text-orange-800 bg-orange-50 rounded-lg px-2 py-1 inline-block"><b>Not verified.</b> Scheduled <span x-text="i.time"></span>: no staff photo within its ±<span x-text="i.window ? i.window.after_min : '?'"></span>-min window.<template x-if="i.billed"><b> This is billed.</b></template></div>
+                        <div class="mt-2 text-xs text-orange-800 bg-orange-50 rounded-lg px-2 py-1 inline-block"><b>Not verified.</b> Scheduled <span x-text="to12(i.time)"></span>: no staff photo within its ±<span x-text="i.window ? i.window.after_min : '?'"></span>-min window.<template x-if="i.billed"><b> This is billed.</b></template></div>
                       </template>
 
                       <template x-if="i.dispute">
@@ -361,12 +361,21 @@ function guardian() {
     },
     icon(c) { return {medication:'💊', meal:'🍽️', therapy:'🦵', activity:'🎵', vitals:'❤️'}[c] || '•'; },
     short(h) { return h && h.length > 16 ? h.slice(0, 10) + '…' + h.slice(-6) : (h || ''); },
-    fmtTime(t) { return /^\d\d:\d\d$/.test(t) ? t : new Date(t).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); },
+    fmtTime(t) { return to12(t); },
     fmtDate(d) { return new Date(d + 'T12:00').toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}); },
     shortDate(d) { return new Date(d + 'T12:00').toLocaleDateString([], {month:'short', day:'numeric'}); },
     weekday(d) { return new Date(d + 'T12:00').toLocaleDateString([], {weekday:'short'}); },
     stay(n) { const y = Math.floor(n / 365), m = Math.floor((n % 365) / 30); return (y ? y + ' yr ' : '') + (m ? m + ' mo' : (y ? '' : n + ' days')); },
   };
+}
+function to12(t) {
+  // '07:30' or ISO timestamp -> '7:30 AM'
+  if (!t) return '';
+  let h, m;
+  const hm = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (hm) { h = +hm[1]; m = hm[2]; }
+  else { const d = new Date(t); if (isNaN(d)) return t; h = d.getHours(); m = String(d.getMinutes()).padStart(2, '0'); }
+  return ((h % 12) || 12) + ':' + m + ' ' + (h < 12 ? 'AM' : 'PM');
 }
 function sortedCopy(v) {
   if (Array.isArray(v)) return v.map(sortedCopy);

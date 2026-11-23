@@ -106,6 +106,14 @@ def _hhmm_from_iso(iso: str) -> str | None:
         return f"{m.group(1)}:{m.group(2)}" if m else None
 
 
+def _12h(hhmm: str | None) -> str:
+    """'07:30' -> '7:30 AM' for display text."""
+    if not hhmm or not re.match(r"^\d{1,2}:\d{2}$", hhmm):
+        return hhmm or ""
+    h, m = int(hhmm.split(":")[0]), hhmm.split(":")[1]
+    return f"{(h % 12) or 12}:{m} {'AM' if h < 12 else 'PM'}"
+
+
 def _mins_between(hhmm_a: str, hhmm_b: str) -> int:
     """Signed minutes from a→b (negative = a is after b)."""
     ah, am = int(hhmm_a[:2]), int(hhmm_a[-2:])
@@ -387,7 +395,7 @@ def reports(facility_id: str):
         route = json.loads(d["route_json"])
         inv = next((s for s in route if s["to"] == "investigator"), None)
         if inv:
-            out.append({"id": d["id"], "kind": "dispute", "resident": d["resident"], "time": d["time"],
+            out.append({"id": d["id"], "kind": "dispute", "resident": d["resident"], "time": _12h(d["time"]),
                         "title": d["title"], "detail": f'Family: "{d["reason"]}" · {inv["label"]}'})
 
     # 2. delayed / verified_late (today only — past days accumulate too much noise)
@@ -398,14 +406,14 @@ def reports(facility_id: str):
         for i in _items(r["id"], today):
             if i["status"] in ("delayed", "verified_late"):
                 if i["status"] == "delayed":
-                    detail = f'Scheduled {i["time"]}, past ±{i["window"]["after_min"]}-min window, no staff photo.'
+                    detail = f'Scheduled {_12h(i["time"])}, past ±{i["window"]["after_min"]}-min window, no staff photo.'
                 else:
                     cap = _hhmm_from_iso((i["event"] or {}).get("captured_at", "")) or "??:??"
-                    detail = f'Scheduled {i["time"]}, staff photo captured {cap} ({i["window"]["after_min"]}+ min late).'
+                    detail = f'Scheduled {_12h(i["time"])}, staff photo captured {_12h(cap)} ({i["window"]["after_min"]}+ min late).'
                 if i.get("billed"):
                     detail += f' Billed as {i["billed"]}.'
                 out.append({"id": f'late-{r["id"]}-{i["id"]}', "kind": i["status"],
-                            "resident": r["name"], "time": i["time"], "title": i["title"],
+                            "resident": r["name"], "time": _12h(i["time"]), "title": i["title"],
                             "detail": detail})
     return {"reports": out}
 
