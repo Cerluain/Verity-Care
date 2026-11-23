@@ -226,9 +226,16 @@ def facility_inventory(facility_id: str | None = None, limit: int = 20):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.get("/facility/inventory/periods/{facility_id}")
+def facility_periods(facility_id: str):
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/facility/inventory/periods/{facility_id}")
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/facility/inventory/fixture-preview/{facility_id}")
-def facility_fixture_preview(facility_id: str):
-    r = _http.get(f"{ONCHAIN_SERVICE_URL}/facility/inventory/fixture-preview/{facility_id}")
+def facility_fixture_preview(facility_id: str, period: str | None = None):
+    params = {"period": period} if period else {}
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/facility/inventory/fixture-preview/{facility_id}", params=params)
     return JSONResponse(r.json(), status_code=r.status_code)
 
 

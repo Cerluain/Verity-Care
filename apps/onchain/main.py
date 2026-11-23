@@ -828,11 +828,32 @@ CLINICAL_DIR = _REPO_ROOT / "data" / "clinical"
 FIXTURES_DIR = _REPO_ROOT / "data" / "demo" / "inventory-fixtures"
 
 
-def _load_fixture(facility_id: str) -> dict:
+def _load_fixture(facility_id: str, period: Optional[str] = None) -> dict:
+    """Load a staged fixture for a facility. When a period is passed, we first
+    try `<facility>-<period>.json` (e.g. mi-casa-…-2026-10.json for the Oct
+    snapshot), then fall back to the un-dated `<facility>.json`. This lets
+    one facility ship a timeline of monthly snapshots without duplicating
+    the base fixture."""
+    if period:
+        dated = FIXTURES_DIR / f"{facility_id}-{period}.json"
+        if dated.exists():
+            return json.loads(dated.read_text())
     p = FIXTURES_DIR / f"{facility_id}.json"
     if not p.exists():
-        raise HTTPException(404, f"no inventory fixture staged for {facility_id}")
+        raise HTTPException(404, f"no inventory fixture staged for {facility_id} (period={period})")
     return json.loads(p.read_text())
+
+
+def _fixture_periods(facility_id: str) -> list[str]:
+    """Discover every staged period for a facility. Returns sorted periods
+    (ascending by date string, so '2026-09', '2026-10', '2026-11')."""
+    periods = []
+    for p in FIXTURES_DIR.glob(f"{facility_id}-*.json"):
+        suffix = p.stem[len(facility_id) + 1:]
+        # Accept YYYY-MM style only.
+        if len(suffix) == 7 and suffix[4] == "-" and suffix[:4].isdigit() and suffix[5:].isdigit():
+            periods.append(suffix)
+    return sorted(periods)
 
 
 class _LineItem(BaseModel):
@@ -858,11 +879,12 @@ class InventoryCommitRequest(BaseModel):
 @app.post("/facility/inventory/parse")
 async def facility_inventory_parse(
     facility_id: str = Form(...),
+    period: Optional[str] = Form(None),
     image: UploadFile = File(...),
 ):
-    """STEP 1: pin the photo to IPFS and return the pre-staged fixture as if the
-    image had been OCR-parsed. No chain write, no envelope hash, no anchor.
-    Operator can now edit the returned line items freely before committing."""
+    """STEP 1: pin the photo to IPFS and return the pre-staged fixture (keyed by
+    facility + period) as if the image had been OCR-parsed. No chain write.
+    Operator edits the returned line items freely before committing."""
     raw = await image.read()
     if not raw:
         raise HTTPException(400, "image is required")
@@ -872,7 +894,7 @@ async def facility_inventory_parse(
     mime = image.content_type or "image/jpeg"
     image_cid = _pinata_upload_file(f"{facility_id}-inv.jpg", raw, mime)
 
-    fx = _load_fixture(facility_id)   # pretend OCR output
+    fx = _load_fixture(facility_id, period=period)
     return {
         "image_cid":    image_cid,
         "image_sha256": image_sha,
@@ -886,6 +908,7 @@ async def facility_inventory_parse(
         "inventory_snapshots": fx.get("inventory_snapshots", {}),
         "facility_id":  facility_id,
         "facility_name": fx.get("facility_name"),
+        "period":       fx.get("period", period),
     }
 
 
@@ -1147,9 +1170,16 @@ def drug_disparity(facility_id: str):
 
 
 @app.get("/facility/inventory/fixture-preview/{facility_id}")
-def fixture_preview(facility_id: str):
+def fixture_preview(facility_id: str, period: Optional[str] = None):
     """Preview the staged fixture for a facility — used by the facility UI to
     display the parsed line items BEFORE committing (so the operator can review
-    what's about to be anchored)."""
-    return _load_fixture(facility_id)
+    what's about to be anchored). Respects an optional period override."""
+    return _load_fixture(facility_id, period=period)
+
+
+@app.get("/facility/inventory/periods/{facility_id}")
+def fixture_periods(facility_id: str):
+    """List every staged period for a facility. Powers the month-selector in
+    the facility UI. Returns periods sorted ascending by date string."""
+    return {"facility_id": facility_id, "periods": _fixture_periods(facility_id)}
 

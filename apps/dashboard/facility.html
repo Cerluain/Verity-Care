@@ -48,8 +48,19 @@
             Upload your pharmacy invoice / cabinet photo. We pin it to IPFS, attest the parsed line items on-chain under your facility wallet.
           </p>
         </div>
-        <div class="text-right text-xs text-slate-500">
-          period <span class="mono font-medium text-slate-700" x-text="period"></span>
+        <div class="text-right text-xs text-slate-500 flex flex-col items-end gap-1">
+          <label class="flex items-center gap-2">
+            period
+            <select x-model="period" @change="onPeriodChange()"
+                    class="mono bg-white border border-slate-300 rounded px-2 py-1 text-xs">
+              <template x-for="p in availablePeriods" :key="p">
+                <option :value="p" x-text="p"></option>
+              </template>
+              <template x-if="!availablePeriods.length">
+                <option :value="period" x-text="period"></option>
+              </template>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -226,6 +237,7 @@ function facility() {
     selected: null,
     chain: {ok: false, chain: '?'},
     period: new Date().toISOString().slice(0,7),
+    availablePeriods: [],   // discovered from backend per facility
     form: { staff_pseudonym: 'FACILITY-ADMIN' },
     preview: null,          // data URL for <img>
     parsed: null,           // {line_items:[], invoice_ref, supplier} once "parse" click fires
@@ -251,7 +263,24 @@ function facility() {
     async onFacilityChange() {
       history.replaceState(null, '', '?facility=' + encodeURIComponent(this.selected));
       this.resetParse();
-      await this.loadSnapshots();
+      await Promise.all([this.loadPeriods(), this.loadSnapshots()]);
+    },
+
+    async onPeriodChange() {
+      this.resetParse();
+    },
+
+    async loadPeriods() {
+      try {
+        const r = await fetch('/facility/inventory/periods/' + encodeURIComponent(this.selected));
+        const j = r.ok ? await r.json() : {periods: []};
+        this.availablePeriods = j.periods || [];
+        // Default to the latest available period; if none staged, keep whatever
+        // the form currently shows (today's YYYY-MM).
+        if (this.availablePeriods.length) {
+          this.period = this.availablePeriods[this.availablePeriods.length - 1];
+        }
+      } catch(_) { this.availablePeriods = []; }
     },
 
     resetParse() {
@@ -307,6 +336,7 @@ function facility() {
       try {
         const fd = new FormData();
         fd.append('facility_id', this.selected);
+        fd.append('period', this.period);
         fd.append('image', file);
         const r = await fetch('/facility/inventory/parse', { method:'POST', body: fd });
         if (!r.ok) throw new Error('parse failed: ' + r.status);

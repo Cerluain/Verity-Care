@@ -1,0 +1,20 @@
+{
+  "facility_id":    "mi-casa-life-care-az",
+  "facility_name":  "Mi Casa Nursing Center",
+  "period":         "2026-10",
+  "invoice_ref":    "INV-MC-4301",
+  "supplier":       "MedSupply Southwest",
+  "line_items": [
+    {"drug": "insulin_lispro", "qty": 88, "unit_price":  47.80, "total":  4206.40},
+    {"drug": "metformin",      "qty": 5,  "unit_price":  40.90, "total":   204.50},
+    {"drug": "atorvastatin",   "qty": 11, "unit_price":  28.60, "total":   314.60},
+    {"drug": "lisinopril",     "qty": 6,  "unit_price":  12.20, "total":    73.20},
+    {"drug": "donepezil",      "qty": 18, "unit_price":  36.40, "total":   655.20},
+    {"drug": "levothyroxine",  "qty": 4,  "unit_price":  43.60, "total":   174.40}
+  ],
+  "receipt_total": 5628.30,
+  "inventory_snapshots": {
+    "start_of_month": {"insulin_lispro": 40, "metformin": 3, "atorvastatin": 9,  "lisinopril": 5, "donepezil": 16, "levothyroxine": 2},
+    "end_of_month":   {"insulin_lispro": 34, "metformin": 3, "atorvastatin": 8,  "lisinopril": 5, "donepezil": 14, "levothyroxine": 2}
+  }
+}
