@@ -62,7 +62,10 @@ def staff_page():
 
 @app.get("/")
 def index():
-    return FileResponse(APP_DIR / "index.html")
+    # Force no-cache so demo pushes land immediately without a hard refresh.
+    return FileResponse(APP_DIR / "index.html",
+                        headers={"Cache-Control": "no-store, must-revalidate",
+                                 "Pragma": "no-cache", "Expires": "0"})
 
 
 @app.get("/facilities")
@@ -204,7 +207,9 @@ def investigator_drug_disparity(facility_id: str):
 
 @app.get("/facility")
 def facility_page():
-    return FileResponse(APP_DIR / "facility.html")
+    return FileResponse(APP_DIR / "facility.html",
+                        headers={"Cache-Control": "no-store, must-revalidate",
+                                 "Pragma": "no-cache", "Expires": "0"})
 
 
 @app.get("/chain/commits")
