@@ -960,13 +960,13 @@ function dashboard() {
       catch(_) { return iso; }
     },
 
-    // A snapshot is "NEW" if it landed in the last 2 minutes — covers the
-    // live-pitch upload. Seeded baseline (Sep+Oct) won't trigger because
-    // scripts/purge.sh anchors them minutes before the demo starts.
+    // A snapshot is "NEW" if it landed in the last 10 minutes — covers the
+    // live-pitch upload + demo narration time. Seeded baseline (Sep+Oct) won't
+    // trigger because scripts/purge.sh anchors them well before the demo.
     isNew(s) {
       const t = Date.parse(s?.committed_at || '');
       if (!t) return false;
-      return (Date.now() - t) < 2 * 60 * 1000;
+      return (Date.now() - t) < 10 * 60 * 1000;
     },
 
     relativeTime(iso) {
