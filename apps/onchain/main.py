@@ -34,12 +34,24 @@ MOCK = os.getenv("MOCK", "false").lower() == "true" or CHAIN == "mock"
 CHAIN_RPC_URL = os.getenv("CHAIN_RPC_URL", "")
 VERITY_COMMIT_ADDRESS = os.getenv("VERITY_COMMIT_ADDRESS", "")
 EXPLORER_BASE_URL = os.getenv("EXPLORER_BASE_URL", "")
-VERITY_COMMIT_PRIVATE_KEY = os.getenv("VERITY_COMMIT_PRIVATE_KEY", "")
+# Three signer private keys (route by claim_type). Keep legacy single-key as fallback.
+FACILITY_SIGNER_PRIVATE_KEY = os.getenv("FACILITY_SIGNER_PRIVATE_KEY", "")
+OMBUDSMAN_SIGNER_PRIVATE_KEY = os.getenv("OMBUDSMAN_SIGNER_PRIVATE_KEY", "")
+VERITY_SERVICE_SIGNER_PRIVATE_KEY = os.getenv("VERITY_SERVICE_SIGNER_PRIVATE_KEY", "")
+LEGACY_SINGLE_KEY = os.getenv("VERITY_COMMIT_PRIVATE_KEY", "")
 ED25519_SIGNING_KEY_B64 = os.getenv("ED25519_SIGNING_KEY_B64", "")
 LOG_FILE = Path(os.getenv("LOG_FILE", "./data/commit-log.jsonl"))
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 CLAIM_TYPES = {1: "tap", 2: "voice", 3: "casefile", 4: "signal_card"}
+
+# claim_type -> which signer role signs it
+SIGNER_ROLE = {
+    1: "facility",        # TAP
+    2: "ombudsman",       # VOICE
+    3: "verity_service",  # CASEFILE
+    4: "facility",        # SIGNAL_CARD — facility uploaded the data, so facility signs
+}
 
 # ---------- ed25519 signing key ----------
 if ED25519_SIGNING_KEY_B64:
@@ -52,11 +64,11 @@ else:
 
 _PUBKEY_B64 = base64.b64encode(_sk.verify_key.encode()).decode()
 
-# ---------- chain signer ----------
-_tx_lock = threading.Lock()
+# ---- chain signers (one per role) ----
+_tx_locks = {"facility": threading.Lock(), "ombudsman": threading.Lock(), "verity_service": threading.Lock()}
 _w3 = None
 _contract = None
-_account = None
+_accounts: dict[str, object] = {}
 
 if not MOCK:
     try:
@@ -69,8 +81,21 @@ if not MOCK:
             "outputs": []
         }]
         _contract = _w3.eth.contract(address=Web3.to_checksum_address(VERITY_COMMIT_ADDRESS), abi=abi)
-        _account = _w3.eth.account.from_key(VERITY_COMMIT_PRIVATE_KEY)
-        print(f"[onchain] live mode on {CHAIN}. signer={_account.address}")
+
+        role_keys = {
+            "facility": FACILITY_SIGNER_PRIVATE_KEY,
+            "ombudsman": OMBUDSMAN_SIGNER_PRIVATE_KEY,
+            "verity_service": VERITY_SERVICE_SIGNER_PRIVATE_KEY,
+        }
+        for role, key in role_keys.items():
+            # Fallback to legacy single-key if a per-role key is missing — keeps old demos working.
+            effective = key or LEGACY_SINGLE_KEY
+            if not effective:
+                raise RuntimeError(f"missing private key for role {role}")
+            _accounts[role] = _w3.eth.account.from_key(effective)
+        print(f"[onchain] live mode on {CHAIN}.")
+        for role, acct in _accounts.items():
+            print(f"  signer[{role}] = {acct.address}")
     except Exception as e:
         print(f"[onchain] live-mode init failed; falling back to MOCK. reason: {e}")
         MOCK = True
@@ -89,6 +114,8 @@ class CommitResponse(BaseModel):
     block_number: Optional[int]
     claim_type: int
     claim_type_label: str
+    signer_role: str
+    signer_address: Optional[str]
     committed_at: str
     mocked: bool
 
@@ -118,7 +145,7 @@ def health():
     return {
         "ok": True, "chain": CHAIN, "mock": MOCK,
         "contract": VERITY_COMMIT_ADDRESS or None,
-        "signer": _account.address if _account else None,
+        "signers": {role: acct.address for role, acct in _accounts.items()} if _accounts else None,
         "pubkey_b64": _PUBKEY_B64,
     }
 
@@ -137,31 +164,35 @@ def commit(req: CommitRequest):
 
     now = datetime.now(timezone.utc).isoformat()
     label = CLAIM_TYPES[req.claim_type]
+    role = SIGNER_ROLE[req.claim_type]
 
     if MOCK:
         tx_hash = _mock_tx_hash(req.claim_type, req.claim_hash)
         entry = {"tx_hash": tx_hash, "claim_type": req.claim_type, "claim_type_label": label,
+                 "signer_role": role, "signer_address": None,
                  "claim_hash": req.claim_hash, "block_number": None, "explorer_url": None,
                  "committed_at": now, "mocked": True}
         _append_log(entry)
         return CommitResponse(**entry)
 
-    with _tx_lock:
+    account = _accounts[role]
+    with _tx_locks[role]:
         try:
-            nonce = _w3.eth.get_transaction_count(_account.address)
+            nonce = _w3.eth.get_transaction_count(account.address)
             tx = _contract.functions.commit(req.claim_type, bytes.fromhex(req.claim_hash[2:])).build_transaction({
-                "from": _account.address, "nonce": nonce,
+                "from": account.address, "nonce": nonce,
                 "gas": 80_000, "maxFeePerGas": _w3.to_wei(3, "gwei"),
                 "maxPriorityFeePerGas": _w3.to_wei(1, "gwei"),
             })
-            signed = _account.sign_transaction(tx)
+            signed = account.sign_transaction(tx)
             tx_hash_bytes = _w3.eth.send_raw_transaction(signed.raw_transaction)
             tx_hash = tx_hash_bytes.hex()
             if not tx_hash.startswith("0x"):
                 tx_hash = "0x" + tx_hash
-            # Fire-and-forget: don't wait for receipt in-line (adds 12s+). Queue is append-only log.
+            # Fire-and-forget: don't wait for receipt in-line (adds 12s+).
             explorer = EXPLORER_BASE_URL + tx_hash if EXPLORER_BASE_URL else None
             entry = {"tx_hash": tx_hash, "claim_type": req.claim_type, "claim_type_label": label,
+                     "signer_role": role, "signer_address": account.address,
                      "claim_hash": req.claim_hash, "block_number": None, "explorer_url": explorer,
                      "committed_at": now, "mocked": False}
             _append_log(entry)
@@ -170,6 +201,7 @@ def commit(req: CommitRequest):
             print(f"[onchain] live-send failed: {e}; falling back to mock tx for this one request")
             tx_hash = _mock_tx_hash(req.claim_type, req.claim_hash)
             entry = {"tx_hash": tx_hash, "claim_type": req.claim_type, "claim_type_label": label,
+                     "signer_role": role, "signer_address": None,
                      "claim_hash": req.claim_hash, "block_number": None, "explorer_url": None,
                      "committed_at": now, "mocked": True, "error": str(e)}
             _append_log(entry)
