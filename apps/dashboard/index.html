@@ -220,7 +220,7 @@
                     line total <span class="font-medium text-slate-800 mono" x-text="'$' + t.line_total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"></span>
                   </div>
                 </div>
-                <div class="grid grid-cols-5 gap-3 text-xs">
+                <div class="grid grid-cols-6 gap-3 text-xs">
                   <div>
                     <div class="text-slate-500">residents on drug</div>
                     <div class="font-semibold text-slate-800 mono" x-text="t.residents_on_drug"></div>
@@ -237,6 +237,11 @@
                     <div class="text-slate-400" x-text="'@$' + t.unit_price.toFixed(2)"></div>
                   </div>
                   <div>
+                    <div class="text-slate-500">NADAC fair price</div>
+                    <div class="font-semibold text-slate-800 mono" x-text="'$' + (t.ref_price_nadac || 0).toFixed(2)"></div>
+                    <div class="text-slate-400">CMS Nov 2026</div>
+                  </div>
+                  <div>
                     <div class="text-slate-500">on-hand Δ</div>
                     <div class="font-semibold text-slate-800 mono" x-text="t.inventory_start + '→' + t.inventory_end"></div>
                     <div class="text-slate-400" x-text="'implied ' + t.implied_consumption"></div>
@@ -245,7 +250,8 @@
                     <div class="text-slate-500">disparity</div>
                     <div class="font-semibold mono" :class="t.excess_qty > 0 ? 'text-red-700' : 'text-slate-800'"
                          x-text="(t.excess_qty > 0 ? '+' : '') + t.excess_qty + ' ' + t.unit"></div>
-                    <div class="text-slate-400" x-text="t.markup_x + 'x NADAC'"></div>
+                    <div class="font-semibold mono" :class="t.markup_x > 1.5 ? 'text-red-700' : 'text-amber-700'"
+                         x-text="t.markup_x + 'x NADAC'"></div>
                   </div>
                 </div>
                 <template x-if="t.severity !== 'green' && (t.excess_spend > 0 || t.markup_overpay > 0)">
