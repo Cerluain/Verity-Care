@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Facility",
+  "description": "A single nursing facility in the demo roster. data/facilities.json is an array of these.",
+  "type": "object",
+  "required": ["id", "name", "ccn", "state", "severity_hint", "scenario_tag"],
+  "properties": {
+    "id": { "type": "string", "description": "kebab-case, used in URLs" },
+    "name": { "type": "string" },
+    "ccn": { "type": "string", "description": "CMS Certification Number" },
+    "state": { "type": "string", "description": "2-letter" },
+    "beds": { "type": "integer" },
+    "severity_hint": {
+      "enum": ["red", "yellow", "green"],
+      "description": "Pre-known demo outcome, used ONLY for left-rail ordering."
+    },
+    "scenario_tag": {
+      "enum": [
+        "pe_owned_fraud",
+        "pharmacy_kickback",
+        "worthless_services",
+        "rural_ambiguous",
+        "clean_baseline"
+      ]
+    },
+    "parent_llc_hint": {
+      "type": "string",
+      "description": "For Abhi's SPEND pillar. Hand-authored, demo-only name grounded in ProPublica reporting."
+    }
+  }
+}

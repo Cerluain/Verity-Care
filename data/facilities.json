@@ -1,0 +1,62 @@
+[
+  {
+    "id": "sunrise-valley",
+    "name": "Sunrise Valley Care Center",
+    "ccn": "035123",
+    "state": "AZ",
+    "beds": 120,
+    "severity_hint": "red",
+    "scenario_tag": "pe_owned_fraud",
+    "parent_llc_hint": "Meridian Holdings LLC"
+  },
+  {
+    "id": "desert-palms",
+    "name": "Desert Palms Rehab",
+    "ccn": "035091",
+    "state": "AZ",
+    "beds": 95,
+    "severity_hint": "red",
+    "scenario_tag": "pharmacy_kickback",
+    "parent_llc_hint": "Saguaro Senior Partners LLC"
+  },
+  {
+    "id": "phoenix-memory-care",
+    "name": "Phoenix Memory Care",
+    "ccn": "035217",
+    "state": "AZ",
+    "beds": 60,
+    "severity_hint": "red",
+    "scenario_tag": "worthless_services",
+    "parent_llc_hint": "Copper State Senior Holdings LLC"
+  },
+  {
+    "id": "big-sky-rural",
+    "name": "Big Sky Rural SNF",
+    "ccn": "275012",
+    "state": "MT",
+    "beds": 35,
+    "severity_hint": "yellow",
+    "scenario_tag": "rural_ambiguous",
+    "parent_llc_hint": "Greer Family Trust"
+  },
+  {
+    "id": "pine-valley",
+    "name": "Pine Valley Care Center",
+    "ccn": "505071",
+    "state": "WA",
+    "beds": 110,
+    "severity_hint": "green",
+    "scenario_tag": "clean_baseline",
+    "parent_llc_hint": "Pine Valley Care LLC"
+  },
+  {
+    "id": "lakeview",
+    "name": "Lakeview Rehab",
+    "ccn": "385118",
+    "state": "OR",
+    "beds": 80,
+    "severity_hint": "green",
+    "scenario_tag": "clean_baseline",
+    "parent_llc_hint": "Lakeview Health Partners LLC"
+  }
+]

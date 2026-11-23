@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseFile",
+  "description": "Investigator-ready referral packet. Aggregates all signals + chain commits + ed25519 signature. Rendered as PDF on export.",
+  "type": "object",
+  "required": ["case_id", "facility", "generated_at", "signals", "sha256", "signature", "signature_pubkey"],
+  "properties": {
+    "case_id": { "type": "string", "description": "e.g. case-sunrise-2026-11-22T22-30Z" },
+    "facility": {
+      "type": "object",
+      "required": ["id", "name", "ccn"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ccn": { "type": "string", "description": "CMS Certification Number, 6 digits" },
+        "state": { "type": "string" }
+      }
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "signals": {
+      "type": "object",
+      "properties": {
+        "spend": { "type": "array", "items": { "$ref": "signal-card.schema.json" } },
+        "shift": { "type": "array", "items": { "$ref": "signal-card.schema.json" } },
+        "voice": { "type": "array", "items": { "$ref": "signal-card.schema.json" } }
+      }
+    },
+    "chain_commits": {
+      "type": "array",
+      "description": "Flat list of every on-chain commit this case touched: taps, voice attestations, signal cards, and this case file itself.",
+      "items": {
+        "type": "object",
+        "required": ["claim_type", "tx_hash"],
+        "properties": {
+          "claim_type": { "type": "integer", "enum": [1, 2, 3, 4] },
+          "claim_type_label": { "type": "string", "enum": ["tap", "voice", "casefile", "signal_card"] },
+          "tx_hash": { "type": "string" },
+          "explorer_url": { "type": "string" },
+          "description": { "type": "string" },
+          "committed_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "aggregate_severity": { "enum": ["red", "yellow", "green"] },
+    "dollars_at_risk_estimate": {
+      "type": "number",
+      "description": "Order-of-magnitude dollar recovery estimate for pitch purposes. Rendered as '$340K/yr recovery.'"
+    },
+    "sha256": {
+      "type": "string",
+      "description": "SHA-256 hex digest over the envelope JSON with `signature` and `sha256` fields excluded."
+    },
+    "signature": {
+      "type": "string",
+      "description": "ed25519 signature over the content preimage. Base64."
+    },
+    "signature_pubkey": {
+      "type": "string",
+      "description": "ed25519 verify key, base64. Embedded so an MFCU reviewer can verify without external lookup."
+    },
+    "signature_algo": { "type": "string", "const": "ed25519" }
+  }
+}

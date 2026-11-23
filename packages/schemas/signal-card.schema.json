@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SignalCard",
+  "description": "A single fraud-signal card. Every pillar (spend/shift/voice) produces these. Dashboard renders them.",
+  "type": "object",
+  "required": ["signal_id", "pillar", "signal_type", "severity", "headline", "computed_at"],
+  "properties": {
+    "signal_id": {
+      "type": "string",
+      "description": "Unique within a case. Suggested format: {pillar}-{signal_type}-{facility_id}-{line_id}"
+    },
+    "pillar": { "enum": ["spend", "shift", "voice"] },
+    "signal_type": {
+      "type": "string",
+      "description": "Within-pillar kind. spend: ref_price_delta | ownership_overlap | volume_sanity. shift: license_collision | credential_validity | impossible_travel. voice: attestation_mismatch."
+    },
+    "facility_id": { "type": "string" },
+    "severity": { "enum": ["red", "yellow", "green"] },
+    "headline": {
+      "type": "string",
+      "description": "One-line human summary, under 120 chars. Rendered as the card title."
+    },
+    "detail": {
+      "type": "string",
+      "description": "Optional multi-line human detail, rendered on card expand."
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Pillar-specific free-form evidence. See examples below."
+    },
+    "citation": {
+      "type": "object",
+      "description": "Where the underlying data came from. Rendered as footer link.",
+      "properties": {
+        "source": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "chain_commit": {
+      "type": "object",
+      "description": "Present iff this signal's hash was anchored on-chain. Rendered as a 'View on Basescan/Solana Explorer' badge.",
+      "properties": {
+        "tx_hash": { "type": "string" },
+        "explorer_url": { "type": "string" },
+        "block_number": { "type": "integer" },
+        "committed_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "computed_at": { "type": "string", "format": "date-time" }
+  }
+}
