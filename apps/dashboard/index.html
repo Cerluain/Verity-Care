@@ -733,7 +733,11 @@ function dashboard() {
       } catch (_) {}
       try {
         this.facilities = await fetch('/facilities').then(r => r.json());
-        if (this.facilities.length) this.select(this.facilities[0]);
+        // Default-land on Mi Casa (the pitch demo facility) if present;
+        // otherwise fall back to the first facility.
+        const preferred = this.facilities.find(f => f.id === 'mi-casa-life-care-az')
+                        || this.facilities[0];
+        if (preferred) this.select(preferred);
       } catch (e) { console.error(e); }
     },
 
