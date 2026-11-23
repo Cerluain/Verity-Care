@@ -250,7 +250,10 @@ function facility() {
       try {
         this.facilities = await fetch('/facilities').then(r=>r.json());
         const q = new URLSearchParams(location.search).get('facility');
-        this.selected = q || (this.facilities[0] && this.facilities[0].id);
+        // Default to Mi Casa (demo facility) when no ?facility= in the URL.
+        const preferred = this.facilities.find(f => f.id === 'mi-casa-life-care-az')
+                        || this.facilities[0];
+        this.selected = q || (preferred && preferred.id);
         await this.onFacilityChange();
       } catch(e) { this.error = 'failed to load facilities'; }
     },
