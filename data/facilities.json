@@ -1,62 +1,92 @@
 [
   {
-    "id": "sunrise-valley",
-    "name": "Sunrise Valley Care Center",
-    "ccn": "035123",
-    "state": "AZ",
-    "beds": 120,
+    "id": "buffalo-center-centers-health",
+    "name": "Buffalo Center for Rehabilitation and Nursing",
+    "ccn": "335638",
+    "state": "NY",
+    "beds": 200,
     "severity_hint": "red",
     "scenario_tag": "pe_owned_fraud",
-    "parent_llc_hint": "Meridian Holdings LLC"
+    "parent_llc_hint": "Centers Health Care (Kenneth Rozenberg) — operating entity: Delaware Operations Assoc LLC",
+    "citation": {
+      "source": "NY Attorney General Letitia James — lawsuit against Centers Health Care & affiliates (Nov 2023)",
+      "url": "https://ag.ny.gov/press-release/2023/attorney-general-james-sues-owners-centers-health-care-stealing-more-83-million"
+    },
+    "notes": "Named in NYAG complaint for siphoning $83M via related-party contracts to owner-controlled vendors — textbook PE related-party procurement markup."
   },
   {
-    "id": "desert-palms",
-    "name": "Desert Palms Rehab",
-    "ccn": "035091",
-    "state": "AZ",
-    "beds": 95,
+    "id": "accordius-rose-manor-portopiccolo",
+    "name": "Accordius Health at Rose Manor",
+    "ccn": "345081",
+    "state": "NC",
+    "beds": 111,
     "severity_hint": "red",
     "scenario_tag": "pharmacy_kickback",
-    "parent_llc_hint": "Saguaro Senior Partners LLC"
+    "parent_llc_hint": "Portopiccolo Group (Simcha Hyman & Naftali Zanziper) — Accordius Health operating brand",
+    "citation": {
+      "source": "ProPublica — 'When Private Equity Takes Over a Nursing Home' (Nov 2020)",
+      "url": "https://www.propublica.org/article/when-private-equity-takes-over-a-nursing-home"
+    },
+    "notes": "Portopiccolo-owned Accordius facility documented in ProPublica for cost-cutting + captive-vendor arrangements (pharmacy/staffing affiliates) matching the kickback-style flow-through pattern."
   },
   {
-    "id": "phoenix-memory-care",
-    "name": "Phoenix Memory Care",
-    "ccn": "035217",
+    "id": "mi-casa-life-care-az",
+    "name": "Mi Casa Nursing Center",
+    "ccn": "035120",
     "state": "AZ",
-    "beds": 60,
+    "beds": 180,
     "severity_hint": "red",
     "scenario_tag": "worthless_services",
-    "parent_llc_hint": "Copper State Senior Holdings LLC"
+    "parent_llc_hint": "Life Care Centers of America (Forrest L. Preston)",
+    "citation": {
+      "source": "DOJ 2016 settlement — Life Care Centers pays $145M for medically unnecessary rehab therapy",
+      "url": "https://www.justice.gov/opa/pr/life-care-centers-america-inc-agrees-pay-145-million-resolve-false-claims-act-allegations"
+    },
+    "notes": "AZ Life Care facility under the same chain DOJ fined $145M for billing ultra-high rehab RUG levels that provided no clinical benefit — classic worthless-services archetype, local to the AZ judge."
   },
   {
-    "id": "big-sky-rural",
-    "name": "Big Sky Rural SNF",
-    "ccn": "275012",
-    "state": "MT",
-    "beds": 35,
+    "id": "crook-county-wy-rural",
+    "name": "Crook County Medical Services District Long Term Care",
+    "ccn": "535029",
+    "state": "WY",
+    "beds": 32,
     "severity_hint": "yellow",
     "scenario_tag": "rural_ambiguous",
-    "parent_llc_hint": "Greer Family Trust"
+    "parent_llc_hint": "Crook County Medical Services District (county hospital district, non-profit)",
+    "citation": {
+      "source": "CMS Nursing Home Compare — Provider Information dataset (Oct 2026)",
+      "url": "https://data.cms.gov/provider-data/dataset/4pq5-n9py"
+    },
+    "notes": "32-bed district-owned facility in Sundance, WY (pop ~1,200) with a 3-star rating and no public fraud record — thin frontier supplier market legitimately justifies above-benchmark unit prices, the canonical false-positive case."
   },
   {
-    "id": "pine-valley",
-    "name": "Pine Valley Care Center",
-    "ccn": "505071",
-    "state": "WA",
-    "beds": 110,
+    "id": "terraces-phoenix-humangood",
+    "name": "The Terraces of Phoenix",
+    "ccn": "035003",
+    "state": "AZ",
+    "beds": 64,
     "severity_hint": "green",
     "scenario_tag": "clean_baseline",
-    "parent_llc_hint": "Pine Valley Care LLC"
+    "parent_llc_hint": "HumanGood Arizona Inc (HumanGood, non-profit CCRC operator)",
+    "citation": {
+      "source": "CMS Nursing Home Compare — Provider Information dataset (Oct 2026)",
+      "url": "https://www.medicare.gov/care-compare/details/nursing-home/035003"
+    },
+    "notes": "5-star overall, non-profit CCRC, no DOJ/OIG/state-AG actions on record — clean reference facility in Phoenix."
   },
   {
-    "id": "lakeview",
-    "name": "Lakeview Rehab",
-    "ccn": "385118",
-    "state": "OR",
-    "beds": 80,
+    "id": "haven-health-green-valley",
+    "name": "Haven Health Green Valley",
+    "ccn": "035073",
+    "state": "AZ",
+    "beds": 111,
     "severity_hint": "green",
     "scenario_tag": "clean_baseline",
-    "parent_llc_hint": "Lakeview Health Partners LLC"
+    "parent_llc_hint": "Haven Health (regional AZ chain)",
+    "citation": {
+      "source": "CMS Nursing Home Compare — Provider Information dataset (Oct 2026)",
+      "url": "https://www.medicare.gov/care-compare/details/nursing-home/035073"
+    },
+    "notes": "5-star AZ facility with no public fraud record — second clean baseline, in-state so the demo map clusters nicely for the AZ judge."
   }
 ]

@@ -49,23 +49,37 @@ Rollup rule (in dashboard):
 
 Abhi doesn't need to compute a facility-level colour. He just returns his three SPEND signals with per-signal `severity`.
 
-## 4. Real CCNs — the defamation question
+## 4. Real CCNs — RESOLVED, dataset updated
 
-**Resolved: using real CCNs tied to documented public fraud cases.**
+`data/facilities.json` has been rewritten with 6 real facilities verified against the Oct 2026 CMS Provider Info CSV. Every red facility is tied to a specific public source (NY AG filing, ProPublica investigation, DOJ settlement). Legal defensibility: we're reproducing accusations that already exist in public filings — no new accusations.
 
-A background research agent is pulling 6 real facilities from CMS Nursing Home Compare where the CCN + facility name match documented DOJ settlements, ProPublica investigations, or state AG filings. Per-facility citation URLs included.
+The 6 locked facilities (use these `id` strings as the primary key, NOT the CCN):
 
-Legal defensibility: we're only reproducing accusations that are already public on DOJ, state AG, or ProPublica. No new accusations. The demo shows how a continuous system would flag what historical investigations found years later.
+| id | Name | State | Hint | Scenario | Citation anchor |
+|---|---|---|---|---|---|
+| `buffalo-center-centers-health` | Buffalo Center for Rehabilitation and Nursing | NY | red | pe_owned_fraud | NY AG v. Centers Health Care (Nov 2023) |
+| `accordius-rose-manor-portopiccolo` | Accordius Health at Rose Manor | NC | red | pharmacy_kickback | ProPublica — Portopiccolo (Nov 2020) |
+| `mi-casa-life-care-az` | Mi Casa Nursing Center | AZ | red | worthless_services | DOJ Life Care Centers $145M (2016) |
+| `crook-county-wy-rural` | Crook County Medical Services District LTC | WY | yellow | rural_ambiguous | CMS Nursing Home Compare |
+| `terraces-phoenix-humangood` | The Terraces of Phoenix | AZ | green | clean_baseline | CMS Care Compare |
+| `haven-health-green-valley` | Haven Health Green Valley | AZ | green | clean_baseline | CMS Care Compare |
 
-Research result lands in `data/facilities.json` (replacing the current placeholder list) within the hour. The locked `scenario_tag` enum stays the same; only names + CCNs + `parent_llc_hint` + per-facility citations change.
+Full per-facility citation URLs + parent company + notes are in `data/facilities.json`. Abhi — your SPEND dataset keys on these `id` strings.
 
-**Abhi — hold the SPEND dataset keyed on facility `id` strings, not on CCN numbers.** The `id` strings in the current `data/facilities.json` (sunrise-valley, desert-palms, phoenix-memory-care, big-sky-rural, pine-valley, lakeview) MAY also change when real facilities replace them. If they do, I'll push an update to `data/facilities.json` and ping. Until then, the current 6 IDs are the source of truth.
+**Scenario-to-SPEND mapping for Abhi:**
 
-## 5. Phoenix Memory Care — SPEND should NOT be red
+- `buffalo-center-centers-health` (PE related-party) → **SPEND is the hero**. Load with ~3 red line items. Ownership graph: Buffalo Center → Centers Health Care → owner-controlled vendor LLCs (per NYAG complaint).
+- `accordius-rose-manor-portopiccolo` (pharmacy kickback) → **SPEND red**. Load with high-markup pharmacy line items. Ownership graph: Accordius Rose Manor → Portopiccolo Group → captive pharmacy vendor.
+- `mi-casa-life-care-az` (worthless services) → **SPEND stays clean/yellow**. This one's red lands on VOICE + SHIFT, not SPEND. Keep its line items boring.
+- `crook-county-wy-rural` → SPEND shows +180% markup on 2 items BUT ownership graph is clean (county hospital district, non-profit). Signal 1 red alone → stays yellow overall. Judge-trap defense tile.
+- `terraces-phoenix-humangood` → all green on SPEND.
+- `haven-health-green-valley` → all green on SPEND.
 
-My scaffold mistake. `worthless_services` is service non-delivery, not procurement. Phoenix Memory Care should look **mostly clean on SPEND** (maybe one yellow line item, no ownership overlap). Its red flag lands on **VOICE** (Dev C: residents reporting undelivered services) and lightly on **SHIFT** (Leo: under-visited dementia residents).
+## 5. "worthless_services" red facility — mapping update
 
-Fixed in `apps/phantom-spend/README.md` (committed). Abhi — when you build line items for Phoenix, keep them boring. Pine Valley + Lakeview + Phoenix are the three SPEND-clean facilities. Red on SPEND: only Sunrise Valley + Desert Palms.
+With the real-facility dataset, `mi-casa-life-care-az` carries the `worthless_services` scenario. It's a Life Care Centers of America property (the chain that signed the DOJ 2016 $145M settlement for medically unnecessary rehab). On SPEND it should look **mostly clean on SPEND** (maybe one yellow line item, no ownership overlap). Its red flag lands on **VOICE** (Dev C: residents reporting undelivered services) and lightly on **SHIFT** (Leo: unstaffed therapy sessions).
+
+Fixed in `apps/phantom-spend/README.md` (committed). Abhi — when you build line items for Mi Casa, keep them boring. The three SPEND-clean facilities are Mi Casa + Terraces of Phoenix + Haven Health Green Valley. Red on SPEND: Buffalo Center (PE) + Accordius Rose Manor (pharmacy kickback).
 
 ---
 

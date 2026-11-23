@@ -46,9 +46,9 @@ Abhi returns **per-signal severity only**. The dashboard computes `aggregate_sev
 - yellow if any pillar has a yellow signal and no reds
 - green otherwise
 
-## Phoenix Memory Care — scenario correction
+## Phoenix Memory Care / Mi Casa Nursing Center — scenario correction
 
-Phoenix Memory Care's `scenario_tag` is `worthless_services`, which is a service-delivery problem, not a procurement problem. On SPEND it should look **mostly clean or yellow** (maybe one modest markup, no ownership overlap). The red flag for Phoenix lands on **VOICE** (residents saying services weren't delivered) and lightly on **SHIFT** (under-visited dementia residents). Dev C owns that mapping on the VOICE side.
+The red facility carrying `worthless_services` is `mi-casa-life-care-az` (Mi Casa Nursing Center, AZ — a Life Care Centers of America property). `worthless_services` is a service-delivery problem, not a procurement problem. On SPEND Mi Casa should look **mostly clean or yellow** (maybe one modest markup, no ownership overlap). Its red flag lands on **VOICE** (residents/proxies saying services weren't delivered) and lightly on **SHIFT** (unstaffed therapy sessions). Dev C owns that mapping on the VOICE side.
 
 ## Volume-vs-census signal
 

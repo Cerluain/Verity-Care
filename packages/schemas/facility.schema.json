@@ -3,7 +3,7 @@
   "title": "Facility",
   "description": "A single nursing facility in the demo roster. data/facilities.json is an array of these.",
   "type": "object",
-  "required": ["id", "name", "ccn", "state", "severity_hint", "scenario_tag"],
+  "required": ["id", "name", "ccn", "state", "severity_hint", "scenario_tag", "citation"],
   "properties": {
     "id": { "type": "string", "description": "kebab-case, used in URLs" },
     "name": { "type": "string" },
@@ -25,7 +25,17 @@
     },
     "parent_llc_hint": {
       "type": "string",
-      "description": "For Abhi's SPEND pillar. Hand-authored, demo-only name grounded in ProPublica reporting."
-    }
+      "description": "Real parent corporation / PE owner name, verifiable in the citation below."
+    },
+    "citation": {
+      "type": "object",
+      "required": ["source", "url"],
+      "description": "Public source documenting the scenario. REQUIRED — this is what makes the demo legally defensible.",
+      "properties": {
+        "source": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "notes": { "type": "string", "description": "One-sentence explanation shown on hover in the dashboard." }
   }
 }
