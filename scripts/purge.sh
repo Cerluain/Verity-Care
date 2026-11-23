@@ -36,3 +36,12 @@ if [[ "$scope" == "all" || "$scope" == "deliveries" ]]; then
   echo "→ POST $dash/care/reset"
   curl -fsS -X POST "$dash/care/reset" | python3 -m json.tool || echo "(skipped: dashboard /care/reset not reachable)"
 fi
+
+# Re-anchor the demo baseline so the investigator dashboard opens on a
+# populated Mi Casa timeline (Sep + Oct 2026). Nov is deliberately left
+# un-anchored so the operator can land the third tx live during the pitch.
+if [[ "$scope" == "all" || "$scope" == "commits" ]]; then
+  echo
+  echo "→ re-seeding Mi Casa Sep + Oct baseline (Nov stays open for live demo)"
+  bash "$(dirname "$0")/seed_mi_casa_timeline.sh" || echo "(skipped: seed script failed — Mi Casa will open empty)"
+fi

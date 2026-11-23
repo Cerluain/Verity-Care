@@ -173,6 +173,9 @@
                     <div class="p-3 text-xs space-y-1 flex-1">
                       <div class="flex items-center gap-2">
                         <span class="font-semibold text-slate-800 mono" x-text="s.period"></span>
+                        <template x-if="isNew(s)">
+                          <span class="pill-red px-1.5 py-0.5 rounded text-[10px] font-bold">NEW</span>
+                        </template>
                         <template x-if="s.block_number">
                           <span class="pill-green px-1.5 py-0.5 rounded text-[10px]">✓ block <span x-text="s.block_number"></span></span>
                         </template>
@@ -255,6 +258,22 @@
                     </template>
                   </div>
                 </template>
+                <!-- Open-data provenance: each number has a verifiable source. -->
+                <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span class="uppercase tracking-wider text-slate-400">sources</span>
+                  <a :href="'https://data.medicaid.gov/dataset/nadac-national-average-drug-acquisition-cost#d=%7B%22query%22%3A%22' + encodeURIComponent(t.display_name) + '%22%7D'"
+                     target="_blank" class="text-blue-600 hover:underline">CMS NADAC ↗</a>
+                  <template x-if="t.ndc">
+                    <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.ndc)"
+                       target="_blank" class="text-blue-600 hover:underline">DailyMed label ↗</a>
+                  </template>
+                  <template x-if="t.ndc">
+                    <a :href="'https://api.fda.gov/drug/ndc.json?search=product_ndc:%22' + encodeURIComponent(t.ndc) + '%22'"
+                       target="_blank" class="text-blue-600 hover:underline">FDA NDC ↗</a>
+                  </template>
+                  <a href="https://openpaymentsdata.cms.gov/" target="_blank" class="text-blue-600 hover:underline">OpenPayments ↗</a>
+                  <span class="text-slate-400">· NDC <span class="mono" x-text="t.ndc || '—'"></span></span>
+                </div>
               </article>
             </template>
           </div>
@@ -911,6 +930,15 @@ function dashboard() {
       if (!iso) return '';
       try { return new Date(iso).toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}); }
       catch(_) { return iso; }
+    },
+
+    // A snapshot is "NEW" if it landed in the last 2 minutes — covers the
+    // live-pitch upload. Seeded baseline (Sep+Oct) won't trigger because
+    // scripts/purge.sh anchors them minutes before the demo starts.
+    isNew(s) {
+      const t = Date.parse(s?.committed_at || '');
+      if (!t) return false;
+      return (Date.now() - t) < 2 * 60 * 1000;
     },
 
     relativeTime(iso) {
