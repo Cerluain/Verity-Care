@@ -960,13 +960,11 @@ function dashboard() {
       catch(_) { return iso; }
     },
 
-    // A snapshot is "NEW" if it landed in the last 10 minutes — covers the
-    // live-pitch upload + demo narration time. Seeded baseline (Sep+Oct) won't
-    // trigger because scripts/purge.sh anchors them well before the demo.
+    // NEW tag is explicitly opt-in: only rows tagged source='ui' by the
+    // facility operator UI qualify. Seed script rows (source='seed') AND any
+    // legacy rows without a source default to NOT new.
     isNew(s) {
-      const t = Date.parse(s?.committed_at || '');
-      if (!t) return false;
-      return (Date.now() - t) < 10 * 60 * 1000;
+      return s?.source === 'ui';
     },
 
     relativeTime(iso) {

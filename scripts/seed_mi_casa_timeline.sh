@@ -29,6 +29,7 @@ anchor() {
     -F "facility_id=$FACILITY" \
     -F "period=$period" \
     -F "staff_pseudonym=FACILITY-ADMIN-MICASA" \
+    -F "source=seed" \
     -F "image=@$photo;type=image/jpeg" \
     | python3 -c "
 import json, sys

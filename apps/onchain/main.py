@@ -913,6 +913,7 @@ class InventoryCommitRequest(BaseModel):
     image_cid: str
     image_sha256: str
     image_mime: str = "image/jpeg"
+    source: str = "ui"  # 'ui' for operator uploads, 'seed' for script-anchored baseline
 
 
 @app.post("/facility/inventory/parse")
@@ -1013,6 +1014,7 @@ async def facility_inventory_commit(req: InventoryCommitRequest):
         "line_items":          items,
         "inventory_snapshots": (fx or {}).get("inventory_snapshots", {}),
         "edited_by_operator":  True,
+        "source":              req.source,
     }
     inv_log = LOG_FILE.parent / "inventory-log.jsonl"
     with inv_log.open("a") as f:
@@ -1025,6 +1027,7 @@ async def facility_inventory_snapshot(
     facility_id: str = Form(...),
     period: Optional[str] = Form(None),
     staff_pseudonym: str = Form("FACILITY-ADMIN"),
+    source: str = Form("ui"),
     image: UploadFile = File(...),
 ):
     """Legacy one-shot: parse + commit in a single POST. Kept for script/seed use
@@ -1050,6 +1053,7 @@ async def facility_inventory_snapshot(
         image_cid=image_cid,
         image_sha256=image_sha,
         image_mime=mime,
+        source=source,
     )
     return await facility_inventory_commit(req)
 
