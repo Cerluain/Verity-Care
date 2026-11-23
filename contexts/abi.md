@@ -64,3 +64,9 @@ Procurement fraud, reference prices, PE nursing-home chains, PECOS / ownership o
 ## TODO sections (for teammates to drop asks here)
 
 (empty — add your TODO sections at the bottom using the format in `contexts/README.md`)
+
+## TODO from Leo — PBJ data handoff for volume_sanity
+
+### [ ] TODO 1 — Share the 6 facility CCNs and quarterly PBJ resident-day numbers as soon as Task 1 finishes (P0, ~immediate)
+
+The `volume_sanity` scoring function is blocked on the exact shared facility identifiers and resident-day values. Send the finalized six-row dataset in the same shape as `facilities.json` once Leo Task 1 is complete.

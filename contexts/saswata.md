@@ -181,3 +181,9 @@ Notes for me:
 - Base Sepolia wallet funded before H1 ends.
 - Vapi + 11Labs + Twilio keys in `.env` by H1 end.
 - Confirmation venue WiFi reaches data.medicaid.gov + base-sepolia RPC + openpaymentsdata.cms.gov + github.com.
+
+## TODO from Leo — lock live-tap chain and capture hardware
+
+### [ ] TODO 1 — Confirm `/live-tap` commit runtime and lock the NFC capture mechanism (P0, ~10 min)
+
+Decide whether `POST /live-tap` calls `VerityCommit.commit()` directly from the FastAPI backend with `web3.py`, or whether the browser/phone-side flow calls Saswata's existing JS helper. Confirm the H0 hardware choice: physical NTAG215 stickers or phone-to-endpoint HTTP triggers (including Android HCE or iOS Shortcuts). Record the decision and the exact payload path so `/live-tap`, the SHIFT tab, and the facility intake feed use one implementation.
