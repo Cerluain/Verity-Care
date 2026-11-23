@@ -47,6 +47,25 @@ def verify_key() -> dict:
     return r.json()
 
 
+def get_commit(tx_hash: str) -> dict:
+    """Fetch chain-level confirmation for a tx. Returns parsed Committed event + block number.
+    Also works for mock / pending txs (returns verified=False with source=local_pending)."""
+    r = _client.get(f"/commit/{tx_hash}")
+    r.raise_for_status()
+    return r.json()
+
+
+def verify_claim(claim_hash_hex: str, claim_type: Optional[int] = None) -> dict:
+    """Return every commit the service has made for this claim_hash.
+    For strong proof follow each `matches[*].tx_hash` with get_commit()."""
+    params: dict = {"claim_hash": claim_hash_hex}
+    if claim_type is not None:
+        params["claim_type"] = claim_type
+    r = _client.get("/verify", params=params)
+    r.raise_for_status()
+    return r.json()
+
+
 def list_commits(facility_id: Optional[str] = None, claim_type: Optional[int] = None) -> list[dict]:
     params = {}
     if facility_id:

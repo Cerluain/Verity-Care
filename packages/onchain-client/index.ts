@@ -50,3 +50,45 @@ export async function verifyKey(): Promise<{ pubkey_b64: string; algo: string }>
   if (!r.ok) throw new Error(`verify-key failed: ${r.status}`);
   return r.json();
 }
+
+export interface GetCommitResponse {
+  tx_hash: string;
+  claim_type: number | null;
+  claim_type_label: string | null;
+  claim_hash: string | null;
+  signer_role: string | null;
+  signer_address: string | null;
+  block_number: number | null;
+  block_timestamp: number | null;
+  verified: boolean;
+  status: number | null;
+  source: string;
+  explorer_url?: string | null;
+  note?: string;
+}
+
+export async function getCommit(txHash: string): Promise<GetCommitResponse> {
+  const r = await fetch(`${BASE}/commit/${txHash}`);
+  if (!r.ok) throw new Error(`getCommit failed: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+export interface VerifyResponse {
+  claim_hash: string;
+  claim_type: number | null;
+  count: number;
+  matches: Array<Record<string, unknown>>;
+  source: string;
+}
+
+export async function verifyClaim(
+  claimHashHex: string,
+  claimType?: number,
+): Promise<VerifyResponse> {
+  const url = new URL(`${BASE}/verify`);
+  url.searchParams.set("claim_hash", claimHashHex);
+  if (claimType !== undefined) url.searchParams.set("claim_type", String(claimType));
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`verifyClaim failed: ${r.status} ${await r.text()}`);
+  return r.json();
+}

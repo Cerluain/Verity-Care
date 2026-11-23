@@ -53,6 +53,10 @@ SIGNER_ROLE = {
     4: "facility",        # SIGNAL_CARD — facility uploaded the data, so facility signs
 }
 
+# Pre-computed event signature hash for Committed(uint8,bytes32,address,uint64).
+# keccak256("Committed(uint8,bytes32,address,uint64)")
+COMMITTED_EVENT_TOPIC0 = "0x3ddbb5dabbe64f6b4749d049f8f15d3aa7f1a79a969ffe3726b99133e71e0d23"
+
 # ---------- ed25519 signing key ----------
 if ED25519_SIGNING_KEY_B64:
     _sk = SigningKey(base64.b64decode(ED25519_SIGNING_KEY_B64))
@@ -224,6 +228,175 @@ def list_commits(facility_id: Optional[str] = None, claim_type: Optional[int] = 
             # facility_id filtering is best-effort — depends on callers embedding it in claim preimage upstream.
             out.append(row)
     return out
+
+
+def _find_local(tx_hash: str) -> Optional[dict]:
+    if not LOG_FILE.exists():
+        return None
+    with LOG_FILE.open() as f:
+        for line in f:
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("tx_hash") == tx_hash:
+                return row
+    return None
+
+
+def _addr_for_role(role: Optional[str]) -> Optional[str]:
+    if role and role in _accounts:
+        try:
+            return _accounts[role].address  # type: ignore[attr-defined]
+        except Exception:
+            return None
+    return None
+
+
+def _role_for_addr(addr: Optional[str]) -> Optional[str]:
+    if not addr:
+        return None
+    for role, acct in _accounts.items():
+        try:
+            if acct.address.lower() == addr.lower():  # type: ignore[attr-defined]
+                return role
+        except Exception:
+            continue
+    return None
+
+
+def _normalize_hex(v) -> Optional[str]:
+    """Return 0x-prefixed lowercase hex string from any of: str, bytes, HexBytes, None."""
+    if v is None:
+        return None
+    if hasattr(v, "hex"):
+        s = v.hex()
+    else:
+        s = str(v)
+    s = s.lower()
+    if not s.startswith("0x"):
+        s = "0x" + s
+    return s
+
+
+def _event_from_receipt(receipt, tx_hash: str) -> Optional[dict]:
+    """Parse a Committed event out of a tx receipt, or return None if not found."""
+    logs = receipt["logs"] if hasattr(receipt, "__getitem__") else receipt.get("logs", [])
+    for log in logs or []:
+        topics = log["topics"] if hasattr(log, "__getitem__") else log.get("topics", [])
+        topics_hex = [_normalize_hex(t) for t in (topics or [])]
+        if not topics_hex or topics_hex[0] != COMMITTED_EVENT_TOPIC0.lower():
+            continue
+        claim_type = int(topics_hex[1], 16) if len(topics_hex) > 1 and topics_hex[1] else None
+        claim_hash = topics_hex[2] if len(topics_hex) > 2 else None
+        committer_raw = topics_hex[3] if len(topics_hex) > 3 else None
+        committer = ("0x" + committer_raw[-40:]) if committer_raw else None
+        # data is 32-byte right-padded uint64 timestamp
+        data_hex = _normalize_hex(log["data"] if hasattr(log, "__getitem__") else log.get("data"))
+        ts = int(data_hex, 16) if data_hex and data_hex != "0x" else None
+        blk = log["blockNumber"] if hasattr(log, "__getitem__") else log.get("blockNumber")
+        if isinstance(blk, str):
+            blk = int(blk, 16)
+        try:
+            from web3 import Web3
+            committer_cs = Web3.to_checksum_address(committer) if committer else None
+        except Exception:
+            committer_cs = committer
+        return {
+            "tx_hash": tx_hash,
+            "claim_type": claim_type,
+            "claim_type_label": CLAIM_TYPES.get(claim_type) if claim_type is not None else None,
+            "claim_hash": claim_hash,
+            "signer_address": committer_cs,
+            "signer_role": _role_for_addr(committer_cs),
+            "block_timestamp": ts,
+            "block_number": blk,
+        }
+    return None
+
+
+@app.get("/commit/{tx_hash}")
+def get_commit(tx_hash: str):
+    """Chain-level confirmation for a committed tx. Returns block, status, parsed event.
+    Falls back to local log if the tx isn't mined yet (returns verified=false, pending)."""
+    if not tx_hash.startswith("0x") or len(tx_hash) != 66:
+        raise HTTPException(400, "tx_hash must be 0x + 64 hex chars")
+
+    local = _find_local(tx_hash)
+
+    # Mock-shaped tx: only the local log can speak to it.
+    if MOCK or tx_hash.startswith("0xmock") or tx_hash.startswith("0xerror"):
+        if local:
+            return {**local, "verified": True, "status": 1, "source": "local_log_mock"}
+        raise HTTPException(404, "tx_hash not found in local log (mock mode)")
+
+    # Live: try chain first for strong proof.
+    try:
+        receipt = _w3.eth.get_transaction_receipt(tx_hash)
+    except Exception:
+        # Not yet mined — return pending from local log.
+        if local:
+            return {
+                **local, "verified": False, "status": None,
+                "source": "local_pending",
+                "note": "tx not yet mined; chain confirmation will land in ~5-15 s",
+                "explorer_url": EXPLORER_BASE_URL + tx_hash if EXPLORER_BASE_URL else None,
+            }
+        raise HTTPException(404, "tx not found on chain or in local log")
+
+    event = _event_from_receipt(receipt, tx_hash)
+    status = int(receipt["status"]) if hasattr(receipt, "__getitem__") else int(receipt.get("status", 0))
+    if event is not None:
+        return {
+            **event,
+            "verified": True,
+            "status": status,
+            "source": "chain",
+            "explorer_url": EXPLORER_BASE_URL + tx_hash if EXPLORER_BASE_URL else None,
+        }
+    # Receipt landed but no Committed event — fall back to local log for context.
+    if local:
+        return {
+            **local, "verified": status == 1, "status": status,
+            "source": "chain_no_event",
+            "note": "receipt found but Committed event not parseable; using local log",
+            "explorer_url": EXPLORER_BASE_URL + tx_hash if EXPLORER_BASE_URL else None,
+        }
+    raise HTTPException(500, "receipt found but no Committed event in logs and no local record")
+
+
+@app.get("/verify")
+def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
+    """Return every commit matching a claim_hash (and optionally claim_type).
+    Draws from the local append-only log — authoritative for what this service has committed.
+    For cross-service verification the caller should also inspect each tx on-chain via
+    the explorer_url or GET /commit/{tx_hash}."""
+    if not claim_hash:
+        raise HTTPException(400, "claim_hash is required")
+    if not claim_hash.startswith("0x") or len(claim_hash) != 66:
+        raise HTTPException(400, "claim_hash must be 0x + 64 hex chars")
+
+    matches: list[dict] = []
+    if LOG_FILE.exists():
+        with LOG_FILE.open() as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if row.get("claim_hash") != claim_hash:
+                    continue
+                if claim_type is not None and row.get("claim_type") != claim_type:
+                    continue
+                matches.append(row)
+
+    return {
+        "claim_hash": claim_hash,
+        "claim_type": claim_type,
+        "count": len(matches),
+        "matches": matches,
+        "source": "local_log",
+    }
 
 
 @app.post("/sign", response_model=SignResponse)

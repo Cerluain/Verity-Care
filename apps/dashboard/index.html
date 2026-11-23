@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verity Care — Investigator Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+    .pill-red    { background: #fee2e2; color: #991b1b; }
+    .pill-yellow { background: #fef3c7; color: #92400e; }
+    .pill-green  { background: #dcfce7; color: #166534; }
+    .dot-red    { background: #dc2626; }
+    .dot-yellow { background: #d97706; }
+    .dot-green  { background: #16a34a; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+<div x-data="dashboard()" x-init="init()" class="flex min-h-screen">
+
+  <!-- LEFT RAIL: facilities -->
+  <aside class="w-80 bg-white border-r border-slate-200 flex flex-col">
+    <div class="px-5 py-4 border-b border-slate-200">
+      <div class="text-xs tracking-wider text-slate-500 uppercase">Verity Care</div>
+      <div class="text-lg font-semibold">Investigator Dashboard</div>
+      <div class="mt-2 flex items-center gap-2 text-xs">
+        <span class="inline-block w-2 h-2 rounded-full" :class="chain.ok ? 'dot-green' : 'dot-red'"></span>
+        <span class="text-slate-600" x-text="chain.ok ? ('on-chain: ' + chain.chain + (chain.mock ? ' (mock)' : '')) : 'on-chain: offline'"></span>
+      </div>
+    </div>
+    <div class="overflow-y-auto flex-1">
+      <template x-for="f in facilities" :key="f.id">
+        <button @click="select(f)"
+                class="w-full text-left px-5 py-3 border-b border-slate-100 hover:bg-slate-50"
+                :class="selected?.id === f.id ? 'bg-slate-100' : ''">
+          <div class="flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full flex-shrink-0"
+                  :class="'dot-' + f.severity_hint"></span>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-sm truncate" x-text="f.name"></div>
+              <div class="text-xs text-slate-500" x-text="f.state + ' · CCN ' + f.ccn + ' · ' + f.beds + ' beds'"></div>
+            </div>
+          </div>
+        </button>
+      </template>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 px-8 py-5">
+      <template x-if="selected">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-semibold" x-text="selected.name"></h1>
+            <span class="px-2 py-0.5 rounded text-xs font-medium"
+                  :class="'pill-' + (aggregate_severity || selected.severity_hint)"
+                  x-text="(aggregate_severity || selected.severity_hint).toUpperCase()"></span>
+          </div>
+          <div class="text-sm text-slate-500 mt-1">
+            <span x-text="selected.state"></span> ·
+            <span>CCN <span x-text="selected.ccn"></span></span> ·
+            <span x-text="selected.beds + ' beds'"></span> ·
+            parent <span class="font-medium text-slate-700" x-text="selected.parent_llc_hint"></span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1">
+            cited:
+            <a :href="selected.citation.url" target="_blank" class="text-blue-600 hover:underline"
+               x-text="selected.citation.source"></a>
+          </div>
+        </div>
+      </template>
+      <template x-if="!selected">
+        <div class="text-slate-400">Select a facility on the left to begin.</div>
+      </template>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="bg-white border-b border-slate-200 px-8 flex gap-6">
+      <template x-for="t in tabs" :key="t">
+        <button @click="activeTab = t"
+                class="py-3 border-b-2 text-sm font-medium"
+                :class="activeTab === t ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'">
+          <span x-text="t.toUpperCase()"></span>
+        </button>
+      </template>
+    </nav>
+
+    <!-- Tab content -->
+    <section class="flex-1 overflow-y-auto p-8">
+      <template x-if="!selected">
+        <div class="text-slate-400">No facility selected.</div>
+      </template>
+
+      <!-- SPEND -->
+      <template x-if="selected && activeTab === 'spend'">
+        <div>
+          <template x-if="loadingSpend">
+            <div class="text-slate-500">Loading SPEND signals…</div>
+          </template>
+          <template x-if="!loadingSpend && spend.signals && spend.signals.length === 0">
+            <div class="text-slate-500">No SPEND signals for this facility.</div>
+          </template>
+          <div class="space-y-4" x-show="!loadingSpend && spend.signals && spend.signals.length">
+            <template x-for="card in spend.signals" :key="card.signal_id">
+              <article class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="w-2 h-2 rounded-full" :class="'dot-' + card.severity"></span>
+                      <span class="text-xs tracking-wider uppercase text-slate-500"
+                            x-text="card.signal_type.replace(/_/g, ' ')"></span>
+                      <span class="text-xs px-1.5 py-0.5 rounded" :class="'pill-' + card.severity"
+                            x-text="card.severity"></span>
+                      <template x-if="card.data_provenance">
+                        <span class="text-xs text-slate-500" x-text="'· ' + card.data_provenance"></span>
+                      </template>
+                    </div>
+                    <div class="font-medium text-slate-900" x-text="card.headline"></div>
+                    <template x-if="card.detail">
+                      <div class="text-sm text-slate-600 mt-1" x-text="card.detail"></div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Chain footer -->
+                <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3 text-xs">
+                  <template x-if="card.chain_commit">
+                    <div class="flex items-center gap-3 flex-1">
+                      <span class="pill-green pill px-2 py-0.5 rounded font-medium">✓ on-chain</span>
+                      <span class="text-slate-500">
+                        signed by
+                        <span class="font-medium text-slate-700" x-text="card.chain_commit.signer_role || 'facility'"></span>
+                      </span>
+                      <span class="mono text-slate-400" x-text="shortHash(card.chain_commit.tx_hash)"></span>
+                      <template x-if="card.chain_commit.explorer_url">
+                        <a :href="card.chain_commit.explorer_url" target="_blank"
+                           class="text-blue-600 hover:underline">view on Basescan ↗</a>
+                      </template>
+                      <button @click="verifyCard(card)"
+                              class="ml-auto text-slate-600 hover:text-slate-900 border border-slate-200 rounded px-2 py-1">
+                        verify
+                      </button>
+                    </div>
+                  </template>
+                  <template x-if="!card.chain_commit">
+                    <div class="flex items-center gap-3 flex-1">
+                      <span class="text-slate-400">not committed</span>
+                      <button @click="commitCard(card)" :disabled="card._committing"
+                              class="ml-auto bg-slate-900 text-white rounded px-3 py-1 text-xs font-medium disabled:bg-slate-400">
+                        <span x-text="card._committing ? 'committing…' : 'Commit on-chain'"></span>
+                      </button>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Verification result -->
+                <template x-if="card._verify">
+                  <div class="mt-3 p-3 bg-slate-50 rounded text-xs mono text-slate-700">
+                    <div class="font-sans not-italic text-slate-500 mb-1">verification</div>
+                    <div>verified: <span x-text="card._verify.verified"></span></div>
+                    <div>source: <span x-text="card._verify.source"></span></div>
+                    <template x-if="card._verify.block_number !== null && card._verify.block_number !== undefined">
+                      <div>block: <span x-text="card._verify.block_number"></span></div>
+                    </template>
+                    <div>signer: <span x-text="card._verify.signer_role + ' · ' + card._verify.signer_address"></span></div>
+                    <template x-if="card._verify.note">
+                      <div class="text-slate-500 font-sans not-italic" x-text="card._verify.note"></div>
+                    </template>
+                  </div>
+                </template>
+              </article>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="selected && activeTab === 'shift'">
+        <div class="text-slate-500">SHIFT pillar — awaiting Leo's phantom-shift service.</div>
+      </template>
+
+      <template x-if="selected && activeTab === 'voice'">
+        <div class="text-slate-500">VOICE pillar — 11Labs widget wiring in progress.</div>
+      </template>
+
+      <template x-if="selected && activeTab === 'case file'">
+        <div class="text-slate-500">CASE FILE — aggregator + ed25519 signing + PDF export pending.</div>
+      </template>
+    </section>
+  </main>
+</div>
+
+<script>
+function dashboard() {
+  return {
+    tabs: ['spend', 'shift', 'voice', 'case file'],
+    activeTab: 'spend',
+    facilities: [],
+    selected: null,
+    spend: { signals: [] },
+    loadingSpend: false,
+    chain: { ok: false, chain: '?', mock: true },
+    aggregate_severity: null,
+
+    async init() {
+      // chain health
+      try {
+        const h = await fetch('/chain/health').then(r => r.json());
+        this.chain = { ok: !!h.ok, chain: h.chain || '?', mock: !!h.mock };
+      } catch (_) {}
+      // facilities
+      try {
+        this.facilities = await fetch('/facilities').then(r => r.json());
+        if (this.facilities.length) this.select(this.facilities[0]);
+      } catch (e) { console.error(e); }
+    },
+
+    async select(f) {
+      this.selected = f;
+      this.spend = { signals: [] };
+      this.aggregate_severity = null;
+      this.loadingSpend = true;
+      try {
+        const j = await fetch('/spend/' + f.id).then(r => r.json());
+        // Mark reactive-friendly fields.
+        j.signals = (j.signals || []).map(c => ({ ...c, _committing: false, _verify: null }));
+        this.spend = j;
+        // Simple severity roll-up: red > yellow > green.
+        const sev = j.signals.map(c => c.severity);
+        this.aggregate_severity = sev.includes('red') ? 'red'
+                                : sev.includes('yellow') ? 'yellow'
+                                : sev.length ? 'green' : null;
+      } catch (e) { console.error(e); }
+      this.loadingSpend = false;
+    },
+
+    shortHash(h) {
+      if (!h) return '';
+      return h.length > 14 ? h.slice(0, 8) + '…' + h.slice(-6) : h;
+    },
+
+    // Canonical hash of a SignalCard: SHA-256 over sorted JSON, excluding chain_commit + runtime fields.
+    async canonicalHash(card) {
+      const clean = Object.fromEntries(
+        Object.entries(card).filter(([k]) => !k.startsWith('_') && k !== 'chain_commit')
+      );
+      const canon = JSON.stringify(sortedCopy(clean));
+      const buf = new TextEncoder().encode(canon);
+      const digest = await crypto.subtle.digest('SHA-256', buf);
+      return '0x' + Array.from(new Uint8Array(digest))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+
+    async commitCard(card) {
+      card._committing = true;
+      try {
+        const claim_hash = await this.canonicalHash(card);
+        // SIGNAL_CARD = 4 → facility signer
+        const tx = await fetch('/chain/commit', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ claim_type: 4, claim_hash }),
+        }).then(r => r.json());
+        card.chain_commit = {
+          tx_hash: tx.tx_hash, explorer_url: tx.explorer_url,
+          block_number: tx.block_number, committed_at: tx.committed_at,
+          signer_role: tx.signer_role, signer_address: tx.signer_address,
+          mocked: tx.mocked,
+        };
+      } catch (e) {
+        alert('Commit failed: ' + e.message);
+      }
+      card._committing = false;
+    },
+
+    async verifyCard(card) {
+      if (!card.chain_commit?.tx_hash) return;
+      try {
+        card._verify = await fetch('/chain/' + card.chain_commit.tx_hash).then(r => r.json());
+      } catch (e) {
+        card._verify = { verified: false, source: 'error', note: e.message };
+      }
+    },
+  };
+}
+
+// Recursive key-sorted copy for canonical JSON hashing.
+function sortedCopy(v) {
+  if (Array.isArray(v)) return v.map(sortedCopy);
+  if (v && typeof v === 'object') {
+    const out = {};
+    for (const k of Object.keys(v).sort()) out[k] = sortedCopy(v[k]);
+    return out;
+  }
+  return v;
+}
+</script>
+</body>
+</html>
