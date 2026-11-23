@@ -121,6 +121,14 @@ async def chain_commit(req: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.post("/sign")
+async def sign(req: Request):
+    """Proxy to apps/onchain /sign for ed25519 envelope signing (case file)."""
+    body = await req.json()
+    r = _http.post(f"{ONCHAIN_SERVICE_URL}/sign", json=body)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/chain/health")
 def chain_health():
     try:

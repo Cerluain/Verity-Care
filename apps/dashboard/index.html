@@ -542,7 +542,165 @@
       </template>
 
       <template x-if="selected && activeTab === 'case file'">
-        <div class="text-slate-500">CASE FILE — aggregator + ed25519 signing + PDF export pending.</div>
+        <div class="space-y-5">
+          <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-xs tracking-wider uppercase text-slate-500">MFCU Referral Packet</div>
+                <div class="text-xl font-semibold mt-1" x-text="selected.name"></div>
+                <div class="text-xs text-slate-500 mt-1">
+                  CCN <span x-text="selected.ccn"></span> · <span x-text="selected.state"></span> ·
+                  <span x-text="selected.beds + ' beds'"></span>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <template x-if="!caseFile.anchor || !caseFile.anchor.block_number">
+                  <button @click="generateCaseFile()" :disabled="caseFile.building"
+                          class="bg-slate-900 text-white rounded px-3 py-1.5 text-sm font-medium hover:bg-slate-700 disabled:bg-slate-400">
+                    <span x-text="caseFile.building ? 'signing & anchoring…' : 'Sign & anchor packet'"></span>
+                  </button>
+                </template>
+                <template x-if="caseFile.anchor && caseFile.anchor.block_number">
+                  <button @click="window.print()"
+                          class="bg-slate-900 text-white rounded px-3 py-1.5 text-sm font-medium hover:bg-slate-700">
+                    Print to PDF
+                  </button>
+                </template>
+                <template x-if="caseFile.anchor && caseFile.anchor.block_number">
+                  <button @click="verifyCaseFile()"
+                          class="border border-slate-200 rounded px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+                    re-verify
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">SPEND signals</div>
+                <div class="text-2xl font-semibold" x-text="(spend.signals || []).length"></div>
+                <div class="text-xs text-slate-500" x-text="(spend.signals || []).filter(c => c.severity === 'red').length + ' red · ' + (spend.signals || []).filter(c => c.chain_commit && c.chain_commit.block_number).length + ' anchored'"></div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">SHIFT signals</div>
+                <div class="text-2xl font-semibold" x-text="shiftSignals.length"></div>
+                <div class="text-xs text-slate-500" x-text="shiftSignals.filter(c => c.chain_commit && c.chain_commit.block_number).length + ' anchored'"></div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">Delivery proofs</div>
+                <div class="text-2xl font-semibold" x-text="pos.deliveries.length"></div>
+                <div class="text-xs text-slate-500" x-text="pos.deliveries.filter(d => d.block_number && !d.mocked).length + ' on Base Sepolia'"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Envelope preview -->
+          <template x-if="caseFile.envelope">
+            <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4">
+              <div>
+                <div class="text-xs tracking-wider uppercase text-slate-500 mb-1">Envelope hash</div>
+                <div class="mono text-xs break-all" x-text="caseFile.envelope.content_sha256"></div>
+                <div class="text-xs text-slate-400 mt-1">SHA-256 of canonical JSON envelope</div>
+              </div>
+              <div>
+                <div class="text-xs tracking-wider uppercase text-slate-500 mb-1">Ed25519 signature</div>
+                <div class="mono text-xs break-all" x-text="caseFile.envelope.signature_b64"></div>
+                <div class="text-xs text-slate-400 mt-1">pubkey <span class="mono" x-text="caseFile.envelope.pubkey_b64"></span></div>
+              </div>
+
+              <!-- Chain row: same four states as SPEND cards. -->
+              <div class="pt-3 border-t border-slate-100 text-xs">
+                <template x-if="caseFile.anchor && !caseFile.anchor.block_number">
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="pill-yellow px-2 py-0.5 rounded font-medium pulse">⏳ pending</span>
+                    <span class="text-slate-500">signer <span class="font-medium text-slate-700" x-text="caseFile.anchor.signer_role || 'verity_service'"></span></span>
+                    <span class="mono text-slate-400" x-text="shortHash(caseFile.anchor.tx_hash)"></span>
+                    <template x-if="caseFile.anchor.explorer_url">
+                      <a :href="caseFile.anchor.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                    </template>
+                    <span class="text-slate-400">· awaiting block confirmation</span>
+                  </div>
+                </template>
+                <template x-if="caseFile.anchor && caseFile.anchor.block_number">
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="pill-green px-2 py-0.5 rounded font-medium">✓ on-chain</span>
+                    <span class="text-slate-500">signed by <span class="font-medium text-slate-700" x-text="caseFile.anchor.signer_role || 'verity_service'"></span></span>
+                    <span class="text-slate-500">block <span class="font-medium text-slate-700" x-text="caseFile.anchor.block_number"></span></span>
+                    <span class="mono text-slate-400" x-text="shortHash(caseFile.anchor.tx_hash)"></span>
+                    <template x-if="caseFile.anchor.explorer_url">
+                      <a :href="caseFile.anchor.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="caseFile.anchor && caseFile.anchor.claim_hash">
+                  <div class="mt-1 text-slate-400">
+                    claim hash <span class="mono" x-text="shortHash(caseFile.anchor.claim_hash)"></span>
+                    <span class="text-slate-300">· SHA-256 of envelope</span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Human-readable packet body for the printed PDF -->
+          <template x-if="caseFile.envelope">
+            <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4 text-sm">
+              <div>
+                <div class="text-xs tracking-wider uppercase text-slate-500 mb-2">SPEND evidence</div>
+                <template x-if="!(spend.signals || []).length">
+                  <div class="text-slate-400 text-xs">No SPEND signals.</div>
+                </template>
+                <ul class="list-disc pl-5 space-y-1">
+                  <template x-for="c in (spend.signals || [])" :key="c.signal_id">
+                    <li>
+                      <span class="font-medium" x-text="c.signal_type.replace(/_/g,' ')"></span>
+                      — <span class="text-slate-600" x-text="c.headline"></span>
+                      <template x-if="c.chain_commit?.explorer_url">
+                        <a :href="c.chain_commit.explorer_url" target="_blank" class="text-blue-600 hover:underline text-xs ml-1">tx ↗</a>
+                      </template>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+              <template x-if="shiftSignals.length">
+                <div>
+                  <div class="text-xs tracking-wider uppercase text-slate-500 mb-2">SHIFT evidence</div>
+                  <ul class="list-disc pl-5 space-y-1">
+                    <template x-for="c in shiftSignals" :key="c.signal_id">
+                      <li><span class="text-slate-600" x-text="c.headline"></span></li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+              <template x-if="pos.deliveries.length">
+                <div>
+                  <div class="text-xs tracking-wider uppercase text-slate-500 mb-2">Delivery proofs (last <span x-text="Math.min(pos.deliveries.length, 5)"></span>)</div>
+                  <ul class="list-disc pl-5 space-y-1">
+                    <template x-for="d in pos.deliveries.slice(0, 5)" :key="d.tx_hash">
+                      <li>
+                        <span class="capitalize" x-text="d.service_type.replace(/_/g,' ')"></span>
+                        — <span class="text-slate-600" x-text="(d.service_detail || '') + ' · patient ' + d.patient_pseudonym"></span>
+                        <template x-if="d.explorer_url">
+                          <a :href="d.explorer_url" target="_blank" class="text-blue-600 hover:underline text-xs ml-1">tx ↗</a>
+                        </template>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <template x-if="caseFile.error">
+            <div class="text-red-600 text-sm" x-text="caseFile.error"></div>
+          </template>
+
+          <template x-if="!caseFile.envelope && !caseFile.building">
+            <div class="text-slate-500 text-sm">
+              Click <span class="font-medium">Sign &amp; anchor packet</span> to build the referral envelope for this facility. The dashboard aggregates SPEND + SHIFT + Proof-of-Service evidence, ed25519-signs it with the Verity Care key, hashes the envelope, and commits that hash on-chain under the <code class="mono">verity_service</code> signer (claim type 3 — CASEFILE). The printed PDF carries both the signature and the on-chain receipt.
+            </div>
+          </template>
+        </div>
       </template>
     </section>
   </main>
@@ -552,10 +710,20 @@
 function dashboard() {
   return {
     tabs: ['spending', 'staffing', 'proof of service', 'guardian reports', 'case file'],
-    activeTab: 'spending',
+    activeTab: (() => {
+      const h = (typeof location !== 'undefined' ? location.hash : '').replace(/^#tab=/,'').replace(/%20/g,' ');
+      const ok = ['spending','staffing','proof of service','guardian reports','case file'];
+      return ok.includes(h) ? h : 'spending';
+    })(),
     staffing: null,
     shiftSignals: [],
     guardianReports: [],
+    caseFile: {
+      envelope: null,   // { content_sha256, signature_b64, pubkey_b64, body }
+      anchor: null,     // { tx_hash, block_number, explorer_url, signer_role, claim_hash, ... }
+      building: false,
+      error: null,
+    },
     facilities: [],
     selected: null,
     spend: { signals: [] },
@@ -595,6 +763,7 @@ function dashboard() {
       this.loadingSpend = true;
       this.pos.deliveries = [];
       this.pos.error = null;
+      this.caseFile = { envelope: null, anchor: null, building: false, error: null };
       this.loadDeliveries(f.id);
       try {
         const j = await fetch('/spend/' + f.id).then(r => r.json());
@@ -895,6 +1064,121 @@ function dashboard() {
       };
       poll();
       this._pollers[key] = setInterval(poll, 3000);
+    },
+
+    // ---- CASE FILE: aggregate → ed25519 sign → sha256 → commit(3) → PDF ----
+    async generateCaseFile() {
+      if (!this.selected || this.caseFile.building) return;
+      this.caseFile.building = true;
+      this.caseFile.error = null;
+      try {
+        // 1. Build the envelope. Strip Alpine-internal fields.
+        const strip = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith('_')));
+        const envelopeBody = {
+          schema: 'verity-care/casefile/v1',
+          facility: {
+            id: this.selected.id,
+            name: this.selected.name,
+            ccn: this.selected.ccn,
+            state: this.selected.state,
+            beds: this.selected.beds,
+            parent_llc_hint: this.selected.parent_llc_hint || null,
+            citation: this.selected.citation || null,
+          },
+          aggregate_severity: this.aggregate_severity || this.selected.severity_hint,
+          generated_at: new Date().toISOString(),
+          evidence: {
+            spend_signals: (this.spend.signals || []).map(strip),
+            shift_signals: (this.shiftSignals || []).map(strip),
+            delivery_proofs: (this.pos.deliveries || []).map(strip),
+          },
+        };
+
+        // 2. Canonicalize + SHA-256 (same algorithm as commitCard).
+        const canon = JSON.stringify(sortedCopy(envelopeBody));
+        const buf = new TextEncoder().encode(canon);
+        const digest = await crypto.subtle.digest('SHA-256', buf);
+        const content_sha256 = '0x' + Array.from(new Uint8Array(digest))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+
+        // 3. Ed25519 sign via apps/onchain /sign (routed by dashboard/main.py).
+        //    We send the canonical JSON bytes base64-encoded.
+        const content_b64 = btoa(canon);
+        const sig = await fetch('/sign', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ content_b64 }),
+        }).then(r => r.ok ? r.json() : Promise.reject(new Error('sign failed ' + r.status)));
+
+        this.caseFile.envelope = {
+          body: envelopeBody,
+          content_sha256,
+          signature_b64: sig.signature_b64,
+          pubkey_b64: sig.pubkey_b64,
+          algo: sig.algo || 'ed25519',
+        };
+
+        // 4. Commit the envelope hash on-chain under claim_type=3 (CASEFILE → verity_service).
+        const tx = await fetch('/chain/commit', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ claim_type: 3, claim_hash: content_sha256 }),
+        }).then(r => r.json());
+
+        this.caseFile.anchor = {
+          tx_hash: tx.tx_hash,
+          explorer_url: tx.explorer_url,
+          block_number: tx.block_number,          // null; backfilled by poller
+          committed_at: tx.committed_at,
+          signer_role: tx.signer_role,
+          signer_address: tx.signer_address,
+          mocked: !!tx.mocked,
+          claim_hash: content_sha256,
+        };
+        // Mock skips polling (local service treats as final).
+        if (this.caseFile.anchor.mocked) {
+          this.caseFile.anchor.block_number = 'mock';
+        } else {
+          this.pollCaseFile();
+        }
+      } catch (e) {
+        this.caseFile.error = String(e.message || e).slice(0, 240);
+      }
+      this.caseFile.building = false;
+    },
+
+    pollCaseFile() {
+      const tx = this.caseFile.anchor?.tx_hash;
+      if (!tx || this._pollers[tx]) return;
+      const poll = async () => {
+        try {
+          const r = await fetch('/chain/' + tx).then(r => r.json());
+          if (r.verified && r.block_number && this.caseFile.anchor) {
+            this.caseFile.anchor.block_number = r.block_number;
+            this.caseFile.anchor.signer_role = r.signer_role || this.caseFile.anchor.signer_role;
+            this.caseFile.anchor.signer_address = r.signer_address || this.caseFile.anchor.signer_address;
+            clearInterval(this._pollers[tx]);
+            delete this._pollers[tx];
+          }
+        } catch (_) {}
+      };
+      poll();
+      this._pollers[tx] = setInterval(poll, 3000);
+    },
+
+    async verifyCaseFile() {
+      const tx = this.caseFile.anchor?.tx_hash;
+      if (!tx) return;
+      try {
+        const r = await fetch('/chain/' + tx).then(r => r.json());
+        if (r.verified && r.block_number && this.caseFile.anchor) {
+          this.caseFile.anchor.block_number = r.block_number;
+          this.caseFile.anchor.signer_role = r.signer_role || this.caseFile.anchor.signer_role;
+          this.caseFile.anchor.signer_address = r.signer_address || this.caseFile.anchor.signer_address;
+        }
+      } catch (e) {
+        this.caseFile.error = 'verify failed: ' + String(e.message || e).slice(0, 180);
+      }
     },
   };
 }
