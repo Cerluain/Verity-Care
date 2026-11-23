@@ -216,8 +216,8 @@
                         </div>
                       </template>
                     </div>
-                    <template x-if="day === today && (i.status === 'verified' || i.status === 'verified_late' || i.status === 'due' || i.status === 'delayed')">
-                      <button @click="dispute(i)" class="self-start text-xs border border-slate-300 rounded-lg px-2 py-1 hover:bg-red-50 hover:border-red-300 whitespace-nowrap">This didn’t happen</button>
+                    <template x-if="i.status !== 'disputed'">
+                      <button @click="dispute(i)" class="self-start text-xs border border-slate-300 rounded-lg px-2 py-1 hover:bg-red-50 hover:border-red-300 whitespace-nowrap">This didn't happen</button>
                     </template>
                   </li>
                 </template>
