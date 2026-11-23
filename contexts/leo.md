@@ -67,4 +67,90 @@ The SHIFT pillar end to end: PBJ baseline data, synthetic nurse rosters/schedule
 
 ## TODO sections (for teammates to drop asks here)
 
-(empty — add your TODO sections at the bottom using the format in `contexts/README.md`)
+## TODO from Saswata — on-chain commitment of every NFC tap (chain infra is live)
+
+### [ ] TODO 1 — Call commit() from your /live-tap handler at capture time (P0, ~15 min once your service exists)
+
+The Base Sepolia contract is deployed and the local onchain service is wired. You call one HTTP endpoint per tap; keys live inside Dev C's service, you never touch them.
+
+**Setup when you scaffold apps/phantom-shift:**
+
+```bash
+# From repo root — Dev C runs apps/onchain on port 8001.
+# Your service POSTs to localhost:8001/commit per tap.
+# Zero wallets, zero private keys on your side.
+
+pip install fastapi uvicorn httpx
+```
+
+**In your /live-tap handler (Python, same shape as my client contract):**
+
+```python
+import hashlib, json, os, sys
+from pathlib import Path
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+# Add the shared client to PYTHONPATH:
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "packages" / "onchain-client"))
+from onchain_client import commit, CLAIM_TAP
+
+app = FastAPI()
+
+class TapIn(BaseModel):
+    facility_id: str
+    nurse_license: str   # already hashed on phone side if you prefer
+    door_id: str
+    ts: float
+    nonce: str           # random per tap, prevents hash collisions
+
+class TapOut(BaseModel):
+    tx_hash: str
+    explorer_url: str | None
+    signer_role: str
+    signer_address: str | None
+    mocked: bool
+
+@app.post("/live-tap", response_model=TapOut)
+def live_tap(tap: TapIn):
+    preimage = f"{tap.facility_id}|{tap.nurse_license}|{tap.door_id}|{tap.ts}|{tap.nonce}".encode()
+    claim_hash = "0x" + hashlib.sha256(preimage).hexdigest()
+    try:
+        tx = commit(CLAIM_TAP, claim_hash)
+    except Exception as e:
+        # Chain hiccup must NOT kill the live demo. Return a mock-shaped response.
+        return TapOut(tx_hash=f"0xerror{hash(preimage) & 0xffffffff:08x}",
+                      explorer_url=None, signer_role="facility",
+                      signer_address=None, mocked=True)
+    # Also broadcast to the dashboard via WebSocket here — your business.
+    return TapOut(
+        tx_hash=tx["tx_hash"], explorer_url=tx["explorer_url"],
+        signer_role=tx["signer_role"], signer_address=tx["signer_address"],
+        mocked=tx["mocked"],
+    )
+```
+
+**Why `CLAIM_TAP` (type 1)?** The onchain service routes claim type 1 to the FACILITY signer (`0xB281013450EE41d4634246A927A7663f12153cB3`), semantic: "the facility submitted this tap." Judges clicking a tap's Basescan link see "from: 0xB281…" which the dashboard labels "signed by: Buffalo Center for Rehabilitation" (or whichever facility is selected). That is the architectural win we want them to see.
+
+**Phone side (iPhone Shortcuts automation OR Android HCE):** tag scan triggers a `curl -X POST http://<laptop-ip>:8002/live-tap` with the body above. Same handler you'd hit from the dashboard button during rehearsal.
+
+**Mock mode:** if Dev C has `MOCK=true` in `apps/onchain/.env`, `tx_hash` starts with `0xmock...` and `explorer_url` is null. Your WebSocket broadcasts the shape unchanged; the dashboard renders a grey "mock" badge. No special casing.
+
+**Rehearsal order (H5, in actual room):**
+
+1. Start Dev C's onchain service: `cd apps/onchain && uvicorn main:app --port 8001`.
+2. Start your service: `cd apps/phantom-shift && uvicorn main:app --port 8002`.
+3. Check both are live: `curl localhost:8001/health | python3 -m json.tool` should show three signers; `curl localhost:8002/health` your own.
+4. Tap each sticker in sequence; dashboard animates the green path; three Basescan links appear, all from the facility signer address.
+5. Ghost shift scenario (two phones, same license, impossible speed): all taps still commit, dashboard flags impossible-travel from the scoring function (not the chain). The chain just proves the taps happened at those timestamps.
+6. Cross-facility collision: same license key, two facilities. Same signer address on-chain (you're using FACILITY signer for both), but different `facility_id` in the preimage → distinct `claim_hash` → distinct txs. Collision is detected in the scoring layer, not the chain.
+
+### [ ] TODO 2 — SHIFT signal cards on GET /shift/{facility_id} (P0, from your task list)
+
+Once your scoring runs, return the same SignalCard JSON shape Abhi returns on SPEND. If you also want per-card anchoring (optional, P1), same `_anchor(card)` pattern as Abhi's (claim_type = SIGNAL_CARD = 4). But the live-tap TODO above is the demo-critical chain story; signal-card anchoring on SHIFT is garnish.
+
+### Non-goals for you on chain
+
+- Do NOT add a wallet, do NOT touch private keys, do NOT install web3.py. apps/onchain handles all of that.
+- Do NOT create a separate SHIFT signer. The facility signer is correct for every tap — operationally, it's the facility's building, its reader. Three signer wallets is the pitch story; don't inflate it.
+- Do NOT wait for chain confirmation before broadcasting to the dashboard. The `commit()` call returns a tx_hash immediately (fire-and-forget); confirmation lands async in a block. Your UX should render the Basescan link immediately with "pending" styling that resolves when the block lands.

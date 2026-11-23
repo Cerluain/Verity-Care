@@ -238,3 +238,83 @@ Procurement fraud, reference prices, PE nursing-home chains, PECOS / ownership o
 ### [ ] TODO 1 — Share the 6 facility CCNs and quarterly PBJ resident-day numbers as soon as Task 1 finishes (P0, ~immediate)
 
 The `volume_sanity` scoring function is blocked on the exact shared facility identifiers and resident-day values. Send the finalized six-row dataset in the same shape as `facilities.json` once Leo Task 1 is complete.
+
+## TODO from Saswata — on-chain commitment of your SPEND signal cards (chain infra is live)
+
+### [ ] TODO 1 — Anchor each signal card you compute (P0 for chain demo, ~10 min)
+
+The Base Sepolia contract is deployed and the local onchain service is wired. You call one HTTP endpoint per card; keys live inside Dev C's service, you never touch them.
+
+**Setup (one time):**
+
+```bash
+# Dev C runs this; you don't. Just point your service at it.
+# apps/onchain on port 8001 holds the three signer private keys.
+# Flip your local .env to NOT skip chain if you have one.
+
+# Add the client to your service:
+pip install httpx    # already in your deps
+```
+
+**In your `apps/phantom-spend/cards.py`**, right before returning each card:
+
+```python
+import hashlib, json, sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "packages" / "onchain-client"))
+from onchain_client import commit, CLAIM_SIGNAL_CARD
+
+def _anchor(card: dict) -> dict:
+    """Attach a chain_commit block to a signal card. Idempotent; returns the card."""
+    if card.get("chain_commit"):
+        return card
+    canon = json.dumps({k: v for k, v in card.items() if k != "chain_commit"},
+                       sort_keys=True, separators=(",", ":")).encode()
+    claim_hash = "0x" + hashlib.sha256(canon).hexdigest()
+    try:
+        tx = commit(CLAIM_SIGNAL_CARD, claim_hash)
+    except Exception as e:
+        # Never fail the response because chain is flaky; log and skip.
+        print(f"[spend] chain anchor failed, skipping: {e}", file=sys.stderr)
+        return card
+    card["chain_commit"] = {
+        "tx_hash": tx["tx_hash"],
+        "explorer_url": tx["explorer_url"],
+        "block_number": tx.get("block_number"),
+        "committed_at": tx["committed_at"],
+        "signer_role": tx["signer_role"],         # "facility" for SIGNAL_CARD
+        "signer_address": tx["signer_address"],
+        "mocked": tx["mocked"],
+    }
+    return card
+```
+
+Then wrap your four card returns (`ref_price_delta`, `ownership_overlap`, `volume_sanity`, `spend_overall`):
+
+```python
+return _anchor(build_ref_price_delta_card(...))
+```
+
+**Why `CLAIM_SIGNAL_CARD` (type 4)?** The service routes claim type 4 to the FACILITY signer (`0xB281013450EE41d4634246A927A7663f12153cB3`), semantic: "the facility submitted the data this signal was computed from." On Basescan the judges will see the facility is the on-chain attestor. That matches the architectural story.
+
+**Fallback behaviour:** if `apps/onchain` isn't running, the `commit()` call throws, `_anchor()` logs and returns the card without a `chain_commit` field. Your service still responds 200. Dev C's dashboard just skips the Basescan badge for cards without `chain_commit`.
+
+**Mock mode:** if Dev C has `MOCK=true` in `apps/onchain/.env`, the returned `tx_hash` starts with `0xmock...` and `explorer_url` is null. Your card still carries the commit block with `mocked: true`; the dashboard renders a grey badge. No special casing on your side.
+
+**Verification:** after re-running `make build-data` or regenerating samples, every sample JSON under `apps/phantom-spend/samples/` should have four non-null `chain_commit` blocks per facility (24 total chain commits).
+
+### [ ] TODO 2 — Re-generate your sample JSONs with chain_commit populated (P0, ~2 min after TODO 1)
+
+```bash
+cd apps/phantom-spend
+# make sure Dev C's onchain service is running at localhost:8001
+curl -s http://localhost:8001/health | python3 -m json.tool  # should show 3 signers
+python scripts/build_demo_data.py --regenerate-samples
+```
+
+Push the updated samples so the dashboard has them for a full-offline demo path.
+
+### Non-goals for you on chain
+
+- Do NOT add a wallet, do NOT touch private keys, do NOT install web3.py. The onchain service handles all of that.
+- Do NOT add chain signing for the invoice-upload widget on the facility intake page — that lands on me (Dev C) since I own that page.
+- Do NOT batch-commit across cards. One commit per card is the right shape — judges get a Basescan link per signal. Gas cost is negligible on Base Sepolia.
