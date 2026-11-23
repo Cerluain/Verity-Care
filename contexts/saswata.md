@@ -168,6 +168,7 @@ Notes for me:
 - (Nov 22) Target buyer = state MFCU. B2G framing.
 - (Nov 22) Montana rural yellow safety tile is P0 — kills "rural thin-market" judge-trap.
 - (Nov 22) Each dev owns Q&A for their pillar; I own pitch narration + architecture Q&A.
+- (Nov 22) Signing model LOCKED: **backend wallets per legally-responsible institution** (facility / ombudsman / verity_service), one wallet per claim type. No browser wallet for TAP / SIGNAL_CARD / VOICE because those are institutional attestations, not personal. CASEFILE roadmap: 2-of-2 (MFCU investigator passkey/hardware wallet + verity_service backend) because that's the one human-in-the-loop moment. This kills the "why no MetaMask" judge question.
 
 ## Open questions
 

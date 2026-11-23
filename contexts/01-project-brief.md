@@ -98,7 +98,8 @@ See `03-demo-plan.md` §5 for the full schedule. Short version:
 - **"What about legitimate rural price variation?"** → Signal 1 alone would flag them. We require all three signals aligned for red. Our rural-WY tile shows +180% markup but no ownership overlap and matching volume → stays yellow.
 - **"HIPAA?"** → No PHI. NDC drug codes + aggregate PBJ resident-days — both already public. Patient identifiers never leave the facility.
 - **"PECOS ownership data — is it really this clean?"** → PECOS is messy and 18 months stale. Production pulls state SOS + ProPublica Nonprofit Explorer. Demo graphs are hand-authored on real reported structures. That's the real engineering work — not the UI.
-- **"Why not blockchain?"** → Chain of custody needs tamper-evidence, not decentralization. Ed25519-signed JSON + published hash in 20 lines. MFCUs run on Windows laptops; a chain adds friction without evidentiary value.
+- **"Why not blockchain?"** → Chain of custody needs tamper-evidence, not decentralization. ed25519-signed JSON + published hash in 20 lines. MFCUs run on Windows laptops; a chain adds friction without evidentiary value.
+- **"Why no MetaMask / browser wallet?"** → This isn't a consumer product — there's no user signing their own asset. The claims we anchor are institutional: the facility attests to its own tap logs, the ombudsman attests to its own call logs, we attest to our own computations. Those are backend attestations by legally-responsible entities, not personal signatures. The one place a human belongs on-chain is the MFCU investigator confirming they reviewed the case — that's a passkey or hardware-wallet moment at CASEFILE export time, on the production roadmap as a 2-of-2 (investigator + service) signature.
 
 ## Competitive matrix (for the slide)
 
