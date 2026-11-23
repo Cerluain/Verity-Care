@@ -233,7 +233,15 @@ function facility() {
     async loadSnapshots() {
       try {
         const r = await fetch('/facility/inventory?facility_id=' + encodeURIComponent(this.selected));
-        this.snapshots = r.ok ? await r.json() : [];
+        const rows = r.ok ? await r.json() : [];
+        this.snapshots = rows;
+        // Kick off a poller for every row that landed without a block number.
+        // Same bug class as SPEND cards: refresh must not require a fresh upload
+        // to display confirmed chain state.
+        for (let i = 0; i < this.snapshots.length; i++) {
+          const rec = this.snapshots[i];
+          if (rec.tx_hash && !rec.block_number && !rec.mocked) this.pollTx(i);
+        }
       } catch(_) { this.snapshots = []; }
     },
 
@@ -278,7 +286,8 @@ function facility() {
         const resp = await r.json();
         // Prepend the new snapshot, kick off block-number polling.
         this.snapshots.unshift(resp);
-        if (!resp.block_number && !resp.mocked) this.pollTx(resp);
+        // Index 0 now. If still pending, poll via index so mutations hit the Alpine proxy.
+        if (!resp.block_number && !resp.mocked) this.pollTx(0);
         this.preview = null;
         this.$refs.file.value = '';
       } catch(e) {
@@ -287,16 +296,21 @@ function facility() {
       this.uploading = false;
     },
 
-    pollTx(rec) {
-      if (!rec.tx_hash || rec.block_number) return;
-      const key = rec.tx_hash;
+    pollTx(idx) {
+      // Poll by index into this.snapshots so we mutate the reactive proxy, not a
+      // detached reference. Grab tx_hash up front so an unshift of a newer row
+      // doesn't shift us onto the wrong tx.
+      const tx = this.snapshots[idx]?.tx_hash;
+      if (!tx || this.snapshots[idx]?.block_number) return;
       let tries = 0;
       const t = setInterval(async () => {
         tries++;
         try {
-          const r = await fetch('/chain/' + rec.tx_hash).then(r=>r.json());
+          const r = await fetch('/chain/' + tx).then(r=>r.json());
           if (r.verified && r.block_number) {
-            rec.block_number = r.block_number;
+            // Find the row by tx_hash (robust to reorderings from new uploads).
+            const i = this.snapshots.findIndex(s => s.tx_hash === tx);
+            if (i >= 0) this.snapshots[i].block_number = r.block_number;
             clearInterval(t);
           }
         } catch(_){}
