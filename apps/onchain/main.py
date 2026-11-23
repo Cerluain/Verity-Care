@@ -56,7 +56,7 @@ SIGNER_ROLE = {
     1: "facility",        # TAP
     2: "ombudsman",       # VOICE
     3: "verity_service",  # CASEFILE
-    4: "facility",        # SIGNAL_CARD — facility uploaded the data, so facility signs
+    4: "verity_service",  # SIGNAL_CARD — Verity Care's analytics engine computed the signal, so verity_service signs
     5: "staff",           # PROOF_OF_SERVICE — individual staff member delivered the service
     6: "facility",        # INVENTORY_SNAPSHOT — facility operator attests to cabinet contents
 }

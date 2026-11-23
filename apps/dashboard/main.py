@@ -72,19 +72,74 @@ def facilities():
     return JSONResponse(json.loads(FACILITIES_PATH.read_text()))
 
 
+def _auto_anchor_signals(payload: dict, claim_type: int) -> dict:
+    """verity_service auto-anchors every analytics signal card so the investigator
+    never clicks 'commit on-chain'. Runs server-side, best-effort: failures leave
+    the card un-anchored (UI shows 'awaiting auto-anchor')."""
+    signals = (payload or {}).get("signals") or []
+    if not signals:
+        return payload
+    import hashlib as _h
+    def canon(o):
+        if isinstance(o, dict): return {k: canon(o[k]) for k in sorted(o)}
+        if isinstance(o, list): return [canon(x) for x in o]
+        return o
+    for card in signals:
+        if card.get("chain_commit"):
+            continue
+        clean = {k: v for k, v in card.items() if not k.startswith("_") and k != "chain_commit"}
+        claim_hash = "0x" + _h.sha256(json.dumps(canon(clean), separators=(",", ":")).encode()).hexdigest()
+        # Peek the local verity-service log: if we've already committed this hash,
+        # attach the record without re-hitting chain. Keeps refresh idempotent.
+        try:
+            v = _http.get(f"{ONCHAIN_SERVICE_URL}/verify",
+                          params={"claim_hash": claim_hash, "claim_type": claim_type}, timeout=5)
+            if v.status_code == 200 and v.json().get("count"):
+                m = v.json()["matches"][0]
+                card["chain_commit"] = {
+                    "tx_hash": m.get("tx_hash"), "block_number": m.get("block_number"),
+                    "signer_role": m.get("signer_role"), "signer_address": m.get("signer_address"),
+                    "explorer_url": m.get("explorer_url"), "committed_at": m.get("committed_at"),
+                    "mocked": m.get("mocked", False), "claim_hash": claim_hash,
+                }
+                continue
+        except Exception:
+            pass
+        # Fire a fresh commit (fire-and-forget — chain mines async, block_number
+        # backfills on next /verify read).
+        try:
+            r = _http.post(f"{ONCHAIN_SERVICE_URL}/commit",
+                           json={"claim_type": claim_type, "claim_hash": claim_hash}, timeout=10)
+            if r.status_code == 200:
+                m = r.json()
+                card["chain_commit"] = {
+                    "tx_hash": m.get("tx_hash"), "block_number": m.get("block_number"),
+                    "signer_role": m.get("signer_role"), "signer_address": m.get("signer_address"),
+                    "explorer_url": m.get("explorer_url"), "committed_at": m.get("committed_at"),
+                    "mocked": m.get("mocked", False), "claim_hash": claim_hash,
+                }
+        except Exception:
+            pass  # card stays un-anchored; UI shows "awaiting auto-anchor"
+    return payload
+
+
 @app.get("/spend/{facility_id}")
 def spend(facility_id: str):
-    """Try live Abhi service first, fall back to his pre-built sample JSON."""
+    """Try live Abhi service first, fall back to his pre-built sample JSON.
+    verity_service auto-anchors each signal card before returning."""
+    payload = None
     try:
         r = _http.get(f"{SPEND_API_BASE}/spend/{facility_id}")
         if r.status_code == 200:
-            return JSONResponse(r.json())
+            payload = r.json()
     except Exception:
         pass
-    sample = SPEND_SAMPLES_DIR / f"{facility_id}.json"
-    if sample.exists():
-        return JSONResponse(json.loads(sample.read_text()))
-    raise HTTPException(404, f"no SPEND data for {facility_id}")
+    if payload is None:
+        sample = SPEND_SAMPLES_DIR / f"{facility_id}.json"
+        if not sample.exists():
+            raise HTTPException(404, f"no SPEND data for {facility_id}")
+        payload = json.loads(sample.read_text())
+    return JSONResponse(_auto_anchor_signals(payload, claim_type=4))
 
 
 @app.get("/pbj/{facility_id}")
@@ -105,13 +160,16 @@ def pbj(facility_id: str):
 
 @app.get("/shift/{facility_id}")
 def shift(facility_id: str):
+    payload = None
     try:
         r = _http.get(f"{SHIFT_API_BASE}/shift/{facility_id}")
         if r.status_code == 200:
-            return JSONResponse(r.json())
+            payload = r.json()
     except Exception:
         pass
-    return JSONResponse({"signals": [], "note": "phantom-shift service not yet online"})
+    if payload is None:
+        return JSONResponse({"signals": [], "note": "phantom-shift service not yet online"})
+    return JSONResponse(_auto_anchor_signals(payload, claim_type=4))
 
 
 @app.post("/chain/commit")
