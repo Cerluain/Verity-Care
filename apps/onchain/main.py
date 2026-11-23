@@ -1121,8 +1121,18 @@ def drug_disparity(facility_id: str):
         raise HTTPException(404, f"no clinical denominator for {facility_id}")
 
     # Pull the latest inventory snapshot from the log (plus the previous one
-    # for change detection — "+N vial since last month" on each tile).
-    snapshots = list_inventory(facility_id=facility_id, limit=2)
+    # for change detection — "+N vial since last month" on each tile). Need
+    # to dedupe by period: if the same month was uploaded twice (e.g. operator
+    # re-signed after editing a line item), we want the newest row of the
+    # NEWEST period vs the newest row of the PRIOR period.
+    all_snapshots = list_inventory(facility_id=facility_id, limit=20)
+    by_period: dict[str, dict] = {}
+    for row in all_snapshots:  # list_inventory returns newest-first
+        p = row.get("period")
+        if p and p not in by_period:
+            by_period[p] = row
+    period_order = sorted(by_period.keys(), reverse=True)
+    snapshots = [by_period[p] for p in period_order]
     prev_snapshot = snapshots[1] if len(snapshots) >= 2 else None
     if not snapshots:
         # No live upload yet — use the staged fixture directly so the UI
