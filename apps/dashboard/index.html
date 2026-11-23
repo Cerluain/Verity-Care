@@ -15,6 +15,8 @@
     .dot-yellow { background: #d97706; }
     .dot-green  { background: #16a34a; }
     .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    @keyframes pulse-slow { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+    .pulse { animation: pulse-slow 1.4s ease-in-out infinite; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
@@ -60,6 +62,12 @@
             <span class="px-2 py-0.5 rounded text-xs font-medium"
                   :class="'pill-' + (aggregate_severity || selected.severity_hint)"
                   x-text="(aggregate_severity || selected.severity_hint).toUpperCase()"></span>
+            <button @click="commitAllUnsigned()"
+                    x-show="spend.signals && spend.signals.some(c => !c.chain_commit)"
+                    :disabled="batchCommitting"
+                    class="ml-auto text-xs bg-slate-900 text-white rounded px-3 py-1 font-medium hover:bg-slate-700 disabled:bg-slate-400">
+              <span x-text="batchCommitting ? ('committing ' + batchProgress + '…') : 'Commit all unsigned on-chain'"></span>
+            </button>
           </div>
           <div class="text-sm text-slate-500 mt-1">
             <span x-text="selected.state"></span> ·
@@ -127,33 +135,69 @@
                   </div>
                 </div>
 
-                <!-- Chain footer -->
-                <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3 text-xs">
-                  <template x-if="card.chain_commit">
-                    <div class="flex items-center gap-3 flex-1">
-                      <span class="pill-green pill px-2 py-0.5 rounded font-medium">✓ on-chain</span>
+                <!-- Chain footer: state-machine (idle → committing → pending → confirmed) -->
+                <div class="mt-4 pt-4 border-t border-slate-100 text-xs">
+                  <!-- idle -->
+                  <template x-if="!card.chain_commit && !card._committing">
+                    <div class="flex items-center gap-3">
+                      <span class="text-slate-400">not committed on-chain</span>
+                      <button @click="commitCard(card)"
+                              class="ml-auto bg-slate-900 text-white rounded px-3 py-1 text-xs font-medium hover:bg-slate-700">
+                        Commit on-chain
+                      </button>
+                    </div>
+                  </template>
+
+                  <!-- committing: POST in flight -->
+                  <template x-if="!card.chain_commit && card._committing">
+                    <div class="flex items-center gap-3">
+                      <span class="pulse text-slate-500">signing &amp; broadcasting…</span>
+                    </div>
+                  </template>
+
+                  <!-- pending: tx broadcast, awaiting block -->
+                  <template x-if="card.chain_commit && !card.chain_commit.block_number">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span class="pill-yellow px-2 py-0.5 rounded font-medium pulse">⏳ pending</span>
                       <span class="text-slate-500">
-                        signed by
-                        <span class="font-medium text-slate-700" x-text="card.chain_commit.signer_role || 'facility'"></span>
+                        signer <span class="font-medium text-slate-700" x-text="card.chain_commit.signer_role || 'facility'"></span>
                       </span>
                       <span class="mono text-slate-400" x-text="shortHash(card.chain_commit.tx_hash)"></span>
                       <template x-if="card.chain_commit.explorer_url">
                         <a :href="card.chain_commit.explorer_url" target="_blank"
-                           class="text-blue-600 hover:underline">view on Basescan ↗</a>
+                           class="text-blue-600 hover:underline">Basescan ↗</a>
+                      </template>
+                      <span class="text-slate-400">· awaiting block confirmation</span>
+                    </div>
+                  </template>
+
+                  <!-- confirmed: block number in hand -->
+                  <template x-if="card.chain_commit && card.chain_commit.block_number">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span class="pill-green px-2 py-0.5 rounded font-medium">✓ on-chain</span>
+                      <span class="text-slate-500">
+                        signed by <span class="font-medium text-slate-700" x-text="card.chain_commit.signer_role || 'facility'"></span>
+                      </span>
+                      <span class="text-slate-500">
+                        block <span class="font-medium text-slate-700" x-text="card.chain_commit.block_number"></span>
+                      </span>
+                      <span class="mono text-slate-400" x-text="shortHash(card.chain_commit.tx_hash)"></span>
+                      <template x-if="card.chain_commit.explorer_url">
+                        <a :href="card.chain_commit.explorer_url" target="_blank"
+                           class="text-blue-600 hover:underline">Basescan ↗</a>
                       </template>
                       <button @click="verifyCard(card)"
                               class="ml-auto text-slate-600 hover:text-slate-900 border border-slate-200 rounded px-2 py-1">
-                        verify
+                        re-verify
                       </button>
                     </div>
                   </template>
-                  <template x-if="!card.chain_commit">
-                    <div class="flex items-center gap-3 flex-1">
-                      <span class="text-slate-400">not committed</span>
-                      <button @click="commitCard(card)" :disabled="card._committing"
-                              class="ml-auto bg-slate-900 text-white rounded px-3 py-1 text-xs font-medium disabled:bg-slate-400">
-                        <span x-text="card._committing ? 'committing…' : 'Commit on-chain'"></span>
-                      </button>
+
+                  <!-- Claim-hash subline, shown whenever there's any chain activity -->
+                  <template x-if="card.chain_commit && card.chain_commit.claim_hash">
+                    <div class="mt-1 text-slate-400">
+                      claim hash <span class="mono" x-text="shortHash(card.chain_commit.claim_hash)"></span>
+                      <span class="text-slate-300">· SHA-256 of card content</span>
                     </div>
                   </template>
                 </div>
@@ -205,14 +249,15 @@ function dashboard() {
     loadingSpend: false,
     chain: { ok: false, chain: '?', mock: true },
     aggregate_severity: null,
+    batchCommitting: false,
+    batchProgress: '',
+    _pollers: {},        // { tx_hash: intervalId } — global map
 
     async init() {
-      // chain health
       try {
         const h = await fetch('/chain/health').then(r => r.json());
         this.chain = { ok: !!h.ok, chain: h.chain || '?', mock: !!h.mock };
       } catch (_) {}
-      // facilities
       try {
         this.facilities = await fetch('/facilities').then(r => r.json());
         if (this.facilities.length) this.select(this.facilities[0]);
@@ -220,20 +265,28 @@ function dashboard() {
     },
 
     async select(f) {
+      // Clear pollers from the previous facility.
+      for (const id of Object.values(this._pollers)) clearInterval(id);
+      this._pollers = {};
+
       this.selected = f;
       this.spend = { signals: [] };
       this.aggregate_severity = null;
       this.loadingSpend = true;
       try {
         const j = await fetch('/spend/' + f.id).then(r => r.json());
-        // Mark reactive-friendly fields.
         j.signals = (j.signals || []).map(c => ({ ...c, _committing: false, _verify: null }));
         this.spend = j;
-        // Simple severity roll-up: red > yellow > green.
         const sev = j.signals.map(c => c.severity);
         this.aggregate_severity = sev.includes('red') ? 'red'
                                 : sev.includes('yellow') ? 'yellow'
                                 : sev.length ? 'green' : null;
+        // If any cards came pre-anchored (pending), start polling them.
+        for (const c of j.signals) {
+          if (c.chain_commit && c.chain_commit.tx_hash && !c.chain_commit.block_number) {
+            this.startPolling(c);
+          }
+        }
       } catch (e) { console.error(e); }
       this.loadingSpend = false;
     },
@@ -243,7 +296,6 @@ function dashboard() {
       return h.length > 14 ? h.slice(0, 8) + '…' + h.slice(-6) : h;
     },
 
-    // Canonical hash of a SignalCard: SHA-256 over sorted JSON, excluding chain_commit + runtime fields.
     async canonicalHash(card) {
       const clean = Object.fromEntries(
         Object.entries(card).filter(([k]) => !k.startsWith('_') && k !== 'chain_commit')
@@ -256,34 +308,82 @@ function dashboard() {
     },
 
     async commitCard(card) {
+      if (card._committing || card.chain_commit) return;  // idempotent
       card._committing = true;
       try {
         const claim_hash = await this.canonicalHash(card);
-        // SIGNAL_CARD = 4 → facility signer
         const tx = await fetch('/chain/commit', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ claim_type: 4, claim_hash }),
         }).then(r => r.json());
         card.chain_commit = {
-          tx_hash: tx.tx_hash, explorer_url: tx.explorer_url,
-          block_number: tx.block_number, committed_at: tx.committed_at,
-          signer_role: tx.signer_role, signer_address: tx.signer_address,
+          tx_hash: tx.tx_hash,
+          explorer_url: tx.explorer_url,
+          block_number: tx.block_number,   // null now; filled by poller when mined
+          committed_at: tx.committed_at,
+          signer_role: tx.signer_role,
+          signer_address: tx.signer_address,
           mocked: tx.mocked,
+          claim_hash,
         };
+        // Mock txs skip the poller — the local service already treats them as final.
+        if (tx.mocked) {
+          card.chain_commit.block_number = 'mock';
+        } else {
+          this.startPolling(card);
+        }
       } catch (e) {
         alert('Commit failed: ' + e.message);
       }
       card._committing = false;
     },
 
+    startPolling(card) {
+      const tx = card.chain_commit?.tx_hash;
+      if (!tx || this._pollers[tx]) return;
+
+      const poll = async () => {
+        try {
+          const r = await fetch('/chain/' + tx).then(r => r.json());
+          card._verify = r;
+          if (r.verified && r.block_number) {
+            card.chain_commit.block_number = r.block_number;
+            card.chain_commit.signer_role = r.signer_role || card.chain_commit.signer_role;
+            card.chain_commit.signer_address = r.signer_address || card.chain_commit.signer_address;
+            clearInterval(this._pollers[tx]);
+            delete this._pollers[tx];
+          }
+        } catch (_) { /* transient; keep polling */ }
+      };
+      poll();                                                // kick immediately
+      this._pollers[tx] = setInterval(poll, 3000);
+    },
+
     async verifyCard(card) {
       if (!card.chain_commit?.tx_hash) return;
       try {
         card._verify = await fetch('/chain/' + card.chain_commit.tx_hash).then(r => r.json());
+        if (card._verify.verified && card._verify.block_number) {
+          card.chain_commit.block_number = card._verify.block_number;
+        }
       } catch (e) {
         card._verify = { verified: false, source: 'error', note: e.message };
       }
+    },
+
+    async commitAllUnsigned() {
+      const todo = this.spend.signals.filter(c => !c.chain_commit && !c._committing);
+      if (!todo.length) return;
+      this.batchCommitting = true;
+      let n = 0;
+      for (const c of todo) {
+        n++;
+        this.batchProgress = n + '/' + todo.length;
+        await this.commitCard(c);   // signer lock serializes anyway — nonce-safe
+      }
+      this.batchCommitting = false;
+      this.batchProgress = '';
     },
   };
 }
