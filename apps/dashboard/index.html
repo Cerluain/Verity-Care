@@ -1234,13 +1234,20 @@ function dashboard() {
         try {
           const r = await fetch('/chain/' + tx).then(r => r.json());
           if (r.verified && r.block_number && this.caseFile.anchor) {
-            this.caseFile.anchor.block_number = r.block_number;
-            this.caseFile.anchor.signer_role = r.signer_role || this.caseFile.anchor.signer_role;
-            this.caseFile.anchor.signer_address = r.signer_address || this.caseFile.anchor.signer_address;
+            // Replace the whole object so Alpine fires a top-level reactive
+            // update (deep mutation sometimes misses the pending-pill template).
+            this.caseFile.anchor = {
+              ...this.caseFile.anchor,
+              block_number: r.block_number,
+              block_timestamp: r.block_timestamp || this.caseFile.anchor.block_timestamp,
+              signer_role: r.signer_role || this.caseFile.anchor.signer_role,
+              signer_address: r.signer_address || this.caseFile.anchor.signer_address,
+            };
             clearInterval(this._pollers[tx]);
             delete this._pollers[tx];
-            // Pull the fresh timeline so the new commit shows up at the top.
-            this.loadCaseFileHistory();
+            // Pull the fresh timeline + KPIs so audit list + 'prior sign-offs'
+            // count update immediately (don't wait for next facility switch).
+            await this.loadCaseFileHistory();
           }
         } catch (_) {}
       };
