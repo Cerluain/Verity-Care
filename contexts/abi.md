@@ -441,3 +441,43 @@ If #1 and #2 both return 200 with a `tx_hash` + `metadata_cid`, backend is good.
 - `apps/onchain /delivery` + `/deliveries` endpoints live, smoke-tested with a 1×1 PNG: real tx on Base Sepolia block 62402565, hash round-trip verified byte-for-byte
 - Dashboard `/delivery` + `/deliveries` proxies live so browser hits one origin
 - Proof-of-service tab replaces Voice in the dashboard tab list + placeholder note points to these endpoints
+
+---
+
+## Pitch, research and Arizona re-centre (Nov 22, evening)
+
+**For Saswata / Leo (and your agents):** the pitch is now **centred on Arizona**, and every number on `/pitch` has its source printed under it. The full research pack (evidence, script, business model, Arizona research, numbers explainer, PDF with AI-coach prompt) is on Abi's machine. Ask Abi for the PDF. The essentials are below.
+
+### `/pitch` page changes (`apps/dashboard/pitch.html`), now 12 steps
+- **$64B slide:** "Here in Arizona" block: 140 homes · 86% for-profit · 80% chain-owned
+- **"It compounds" slide:** Arizona sets Medicaid nursing-home rates from the homes' own cost reports
+- **New slide after Buffalo Center:** Hacienda HealthCare, Phoenix. The diagram shows "AZ: ~$10.9M repaid".
+- **Buyer slide:** "Starting in Arizona": AZ MFCU was the only unit honored by HHS-OIG in 2025, on ~$6.8M
+- **Wording fix:** "whatever it wants" → "paying themselves inflated prices, and the rule meant to stop that (42 CFR 413.17) is barely checked"
+- **Diagram label:** the unsourced "4× fair price" → "marked-up invoice"
+
+### Every number on `/pitch`: meaning and source
+
+| On screen | What it means | Source |
+|---|---|---|
+| ~$64B | Medicaid (federal + state) paid for nursing facilities + CCRCs in 2023: $64.2B of $211.3B (30.4%) | CMS National Health Expenditures via MACPAC Exhibit 3 |
+| 140 / 86% / 80% | AZ certified nursing homes; 121 for-profit, 112 in a chain (our count) | CMS Nursing Home Provider Information, AZ rows, Oct 1 2026 |
+| $11.23B / 76.6% | 2019: 9,001 of 11,752 homes paid related parties $11.23B (9.54% of revenue) | Harrington et al. 2023 (2019 cost reports) |
+| 63% | *Estimated* share of 2019 profit hidden via inflated related-party prices, built mainly from Illinois data | Gandhi & Olenski, NBER WP 32258 |
+| 0.58% → 8.84% | Reported margin vs. margin after removing $6.4B disallowed costs + $3.9B depreciation | Harrington et al. 2023 |
+| AZ cost reports | "AHCCCS uses cost and wage reports filed by the nursing facilities" | AHCCCS SPA AZ-25-0029 |
+| $600K → $2M | Buffalo Center's rent before vs. after the owners' own landlord company took over | NY AG, Nov 14 2024 |
+| $83M+ / $45M | **Alleged** diversion across 4 Centers homes / settlement ($8.75M restitution + $35M care fund) | NY AG, Jun 2023 & Nov 2024 |
+| ~$10.9M + $1M | Hacienda (Phoenix) inflated costs billed to AHCCCS 2013–18; repayment + fine; CEO pleaded guilty 2021 | AZ AG via Arizona Daily Independent & 12News |
+| $65.4B | SNF related-party payments **over FY2015–2020** (not per year). OIG asked for routine review; CMS did not concur | HHS-OIG A-07-21-02836, Dec 2024 |
+| ~$2B / $4.64 | MFCU recoveries FY2025 ($1.3B criminal + $706M civil) ÷ ~$424M spend | HHS-OIG MFCU Annual Report FY2025 |
+| ~$6.8M | AZ MFCU budget: $5.1M federal (75%) + $1.7M state | AZ AG, Jun 25 2025 |
+
+### Rules when pitching
+- Only use the numbers above.
+- Say "**alleged**" for the $83M.
+- Hacienda is **not** a nursing home (it's an intermediate care facility for people with intellectual disabilities). Say "Phoenix's Hacienda HealthCare".
+- The 63% is an estimate, mostly from Illinois data.
+- The demo's invoice rows are authored and labelled. Facilities and reference prices are real.
+- Retired numbers, never say: "$90B Medicaid" (it's ~$64B); "NBER says PE extracts $12B/yr" (wrong: that paper is about +10% mortality / +11% spending); "MFCUs recover ~$1B" (it's ~$2B).
+- **Business model (Arizona MFCU first customer, state licence + member badges, no speculative token):** the prices are our estimates. Say "we estimate."
