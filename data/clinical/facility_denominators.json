@@ -34,12 +34,12 @@
     "total_beds": 180,
     "average_daily_census": 171,
     "drug_users": {
-      "insulin_lispro":      6,
-      "metformin":           37,
-      "atorvastatin":        82,
-      "lisinopril":          55,
-      "donepezil":           17,
-      "levothyroxine":       34
+      "insulin_lispro":      3,
+      "metformin":           6,
+      "atorvastatin":        9,
+      "lisinopril":          12,
+      "donepezil":           19,
+      "levothyroxine":       8
     }
   },
 

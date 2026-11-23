@@ -4,7 +4,7 @@
   "insulin_lispro": {
     "display_name":          "Insulin lispro 10 mL vial",
     "unit":                  "vial",
-    "rate_per_user_per_day": 0.5,
+    "rate_per_user_per_day": 1.0,
     "ref_price_nadac":       24.03,
     "ndc":                   "0002-8215-01"
   },
