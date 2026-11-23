@@ -687,13 +687,11 @@
 <script>
 function dashboard() {
   return {
-    tabs: ['spending', 'staffing', 'proof of service', 'guardian reports', 'case file'],
-    // Per-facility tab overrides. Mi Casa is the pitch demo facility — it
-    // only runs the SPENDING / GUARDIAN REPORTS / CASE FILE arc. Other
-    // facilities keep the full 5-tab layout.
-    tabsByFacility: {
-      'mi-casa-life-care-az': ['spending', 'guardian reports', 'case file'],
-    },
+    tabs: ['spending', 'guardian reports', 'case file'],
+    // Per-facility tab overrides. Default to the 3-tab demo layout for every
+    // facility; other facilities don't need staffing or proof-of-service
+    // tabs either (neither has data).
+    tabsByFacility: {},
     activeTab: (() => {
       const h = (typeof location !== 'undefined' ? location.hash : '').replace(/^#tab=/,'').replace(/%20/g,' ');
       const ok = ['spending','staffing','proof of service','guardian reports','case file'];
