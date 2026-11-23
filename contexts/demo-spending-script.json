@@ -1,0 +1,117 @@
+{
+  "title": "Verity Care — SPENDING tab demo script (insulin tile walkthrough)",
+  "when_to_use": "After Nov receipt has been uploaded and the 3rd snapshot card with NEW pill is visible. Investigator is on Mi Casa > SPENDING tab. Camera is zoomed on the insulin_lispro drug tile.",
+  "duration_target_seconds": 60,
+  "scene": "SPENDING tab, insulin_lispro tile close-up",
+  "opening_hook": {
+    "duration_seconds": 8,
+    "voiceover": "Look at this one tile. Insulin lispro. One drug, Mi Casa Phoenix, November 2026. Every number you're about to see traces to a public data source. Nothing synthetic, nothing invented.",
+    "visual_cue": "Point at the insulin tile header, then slowly pan across the 6-column grid."
+  },
+  "field_walkthrough": [
+    {
+      "field": "severity dot",
+      "value_on_screen": "yellow",
+      "duration_seconds": 3,
+      "voiceover": "Yellow dot. The system flagged this tile — not green, not red. Yellow means ONE fraud signal fires. In this case, the price. Red would mean both price AND quantity are off.",
+      "math": "severity rules in main.py drug_disparity()"
+    },
+    {
+      "field": "line total",
+      "value_on_screen": "$5,120.40",
+      "duration_seconds": 4,
+      "voiceover": "Top-right: five thousand one hundred twenty dollars. That's what Mi Casa billed Medicaid for INSULIN alone this month. qty times unit price. From the invoice they signed on-chain.",
+      "math": "102 vials × $50.20"
+    },
+    {
+      "field": "residents on drug",
+      "value_on_screen": "3",
+      "duration_seconds": 5,
+      "voiceover": "Residents on drug: three. Three people at Mi Casa have diabetes requiring insulin lispro. This comes from the facility's own PBJ reporting — the CMS staffing dataset — cross-referenced with the resident conditions file they file with the state.",
+      "math": "facility_denominators.json → drug_users.insulin_lispro = 3"
+    },
+    {
+      "field": "rate per user per day",
+      "value_on_screen": "1.0 vial/day",
+      "duration_seconds": 5,
+      "voiceover": "Below that: one vial per day. That's the clinical consumption rate. A Type-2 diabetic on a mixed basal-bolus insulin regimen uses about 50 units a day. One 10-milliliter vial. This number came from NIH clinical guidelines, not us.",
+      "math": "drug_rates.json → rate_per_user_per_day = 1.0"
+    },
+    {
+      "field": "expected / mo",
+      "value_on_screen": "90 vials",
+      "duration_seconds": 5,
+      "voiceover": "Expected monthly: ninety. Three residents times one vial per day times thirty days. This is the CEILING of what Mi Casa should legitimately need to buy. Any number above this needs a medical explanation.",
+      "math": "3 × 1.0 × 30 = 90"
+    },
+    {
+      "field": "invoiced",
+      "value_on_screen": "102 vials @ $50.20",
+      "duration_seconds": 6,
+      "voiceover": "Invoiced: one hundred and two. Mi Casa billed Medicaid for a hundred and two vials this month, at fifty dollars twenty cents each. This isn't a guess. The facility uploaded their own invoice, signed it with their own wallet, and committed the hash to Base Sepolia. If they try to deny these numbers, the chain makes them a liar.",
+      "math": "from the uploaded invoice; qty=102, unit_price=$50.20"
+    },
+    {
+      "field": "NADAC fair price",
+      "value_on_screen": "$24.03",
+      "duration_seconds": 6,
+      "voiceover": "NADAC fair price: twenty-four dollars and three cents. That's CMS's National Average Drug Acquisition Cost — what US pharmacies actually paid wholesale for a 10-milliliter insulin lispro vial, published every single week by CMS at data.medicaid.gov. Click the FDA label link below — you can see the drug is real.",
+      "math": "drug_rates.json → ref_price_nadac = 24.03"
+    },
+    {
+      "field": "on-hand Δ",
+      "value_on_screen": "78 → 55 (implied 125)",
+      "duration_seconds": 8,
+      "voiceover": "On-hand delta: seventy-eight vials in the cabinet at month start, fifty-five at month end. The 'implied' number below says one hundred twenty-five vials physically left this building this month. That's invoiced plus starting stock minus ending stock. The cabinet log ties the paper invoice to physical reality. If Mi Casa only needed ninety vials and a hundred and twenty-five left the building — where did the other thirty-five go?",
+      "math": "102 + 78 − 55 = 125"
+    },
+    {
+      "field": "disparity +12 vials",
+      "value_on_screen": "+12 vial",
+      "duration_seconds": 5,
+      "voiceover": "Disparity: plus twelve vials. Invoiced minus expected. Twelve extra vials Medicaid paid for that clinical demand can't justify.",
+      "math": "102 − 90 = 12"
+    },
+    {
+      "field": "markup multiplier",
+      "value_on_screen": "2.09x NADAC",
+      "duration_seconds": 5,
+      "voiceover": "Markup: 2.09 times NADAC. Mi Casa is paying — and billing Medicaid — more than double what pharmacies actually pay for this exact drug.",
+      "math": "50.20 / 24.03 = 2.088"
+    }
+  ],
+  "footer_metrics": [
+    {
+      "field": "excess spend",
+      "value_on_screen": "$602",
+      "duration_seconds": 4,
+      "voiceover": "Excess spend: six hundred and two dollars. That's twelve extra vials times fifty dollars twenty each — spending above clinical demand, on one drug, in one month.",
+      "math": "12 × 50.20 = 602"
+    },
+    {
+      "field": "markup overpayment",
+      "value_on_screen": "$2,669",
+      "duration_seconds": 4,
+      "voiceover": "Markup overpayment: two thousand six hundred and sixty-nine dollars. Even if the volume were legitimate, this is the amount the state could claw back from the markup alone — the gap between what Mi Casa paid and the NADAC national average, times a hundred and two vials.",
+      "math": "(50.20 − 24.03) × 102 = 2669.34"
+    }
+  ],
+  "closing_beat": {
+    "duration_seconds": 10,
+    "voiceover": "One drug. One tile. Twelve ghost vials. $3,271 of phantom spend — on insulin alone. And every number here cites a public source. NADAC from CMS. DailyMed from FDA. PBJ staffing from CMS. The invoice from Mi Casa's own wallet. Verity Care doesn't ASK facilities to be transparent. We make transparency something they already signed."
+  },
+  "do_not_say": [
+    "mock",
+    "demo data",
+    "we would have",
+    "this is synthetic",
+    "if we had real data",
+    "approximately"
+  ],
+  "pre_shoot_checklist": [
+    "Confirm Nov snapshot card has red NEW pill (source=ui)",
+    "Confirm insulin_lispro tile shows: 3 residents, 90 expected, 102 invoiced, $50.20 unit price, $24.03 NADAC, 78→55 on-hand, +12 disparity, 2.09x markup, $602 excess, $2,669 overpay",
+    "Open the FDA label link once to verify it's live",
+    "Click a Basescan link on a snapshot card to verify the Nov tx shows the facility wallet signer"
+  ]
+}
