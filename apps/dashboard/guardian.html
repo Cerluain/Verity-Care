@@ -142,9 +142,10 @@
 
           <template x-if="!tl.before_go_live">
             <div>
-              <div class="grid grid-cols-4 gap-3 my-4">
-                <div class="rounded-2xl bg-green-50 border border-green-100 p-3"><div class="text-2xl font-bold text-green-700" x-text="tl.counts.verified"></div><div class="text-xs text-green-800">verified</div></div>
-                <div class="rounded-2xl bg-amber-50 border border-amber-100 p-3"><div class="text-2xl font-bold text-amber-700" x-text="tl.counts.not_verified"></div><div class="text-xs text-amber-800">no proof yet</div></div>
+              <div class="grid grid-cols-5 gap-3 my-4">
+                <div class="rounded-2xl bg-green-50 border border-green-100 p-3"><div class="text-2xl font-bold text-green-700" x-text="tl.counts.verified + (tl.counts.verified_late || 0)"></div><div class="text-xs text-green-800">verified</div></div>
+                <div class="rounded-2xl bg-amber-50 border border-amber-100 p-3"><div class="text-2xl font-bold text-amber-700" x-text="tl.counts.due || 0"></div><div class="text-xs text-amber-800">due now</div></div>
+                <div class="rounded-2xl bg-orange-50 border border-orange-200 p-3"><div class="text-2xl font-bold text-orange-700" x-text="tl.counts.delayed || 0"></div><div class="text-xs text-orange-800">delayed</div></div>
                 <div class="rounded-2xl bg-red-50 border border-red-100 p-3"><div class="text-2xl font-bold text-red-700" x-text="tl.counts.disputed"></div><div class="text-xs text-red-800">disputed</div></div>
                 <div class="rounded-2xl bg-white border border-slate-200 p-3"><div class="text-2xl font-bold text-slate-700" x-text="tl.counts.upcoming"></div><div class="text-xs text-slate-600">upcoming</div></div>
               </div>
@@ -152,7 +153,7 @@
               <ol class="space-y-3">
                 <template x-for="i in tl.items" :key="i.id">
                   <li class="bg-white rounded-2xl border shadow-sm p-4 flex gap-4"
-                      :class="[flashIds.includes(i.id) ? 'flash' : '', {verified:'border-green-200', not_verified:'border-amber-200', disputed:'border-red-300', upcoming:'border-slate-200 opacity-70'}[i.status]]">
+                      :class="[flashIds.includes(i.id) ? 'flash' : '', {verified:'border-green-200', verified_late:'border-green-300 bg-green-50/30', due:'border-amber-200', delayed:'border-orange-300', disputed:'border-red-300', upcoming:'border-slate-200 opacity-70'}[i.status]]">
                     <div class="flex flex-col items-center gap-1 w-14 shrink-0">
                       <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl cat-icon" :class="'cat-' + i.category" x-text="icon(i.category)"></div>
                       <div class="mono text-xs text-slate-500" x-text="i.time"></div>
@@ -161,8 +162,11 @@
                       <div class="flex items-center gap-2 flex-wrap">
                         <span class="font-semibold" x-text="i.title"></span>
                         <span class="text-xs rounded-full px-2 py-0.5 font-medium"
-                              :class="{verified:'bg-green-100 text-green-800', not_verified:'bg-amber-100 text-amber-800', disputed:'bg-red-100 text-red-800', upcoming:'bg-slate-100 text-slate-600'}[i.status]"
-                              x-text="{verified:'✓ verified', not_verified:'no proof yet', disputed:'disputed', upcoming:'upcoming'}[i.status]"></span>
+                              :class="{verified:'bg-green-100 text-green-800', verified_late:'bg-green-100 text-green-800', due:'bg-amber-100 text-amber-800', delayed:'bg-orange-100 text-orange-800', disputed:'bg-red-100 text-red-800', upcoming:'bg-slate-100 text-slate-600'}[i.status]"
+                              x-text="{verified:'✓ verified', verified_late:'⚠ verified · late', due:'⏳ due now', delayed:'⚠ delayed', disputed:'disputed', upcoming:'upcoming'}[i.status]"></span>
+                        <template x-if="i.window">
+                          <span class="text-[11px] text-slate-400" x-text="'window ±' + (i.window.before_min === i.window.after_min ? i.window.before_min + 'm' : i.window.before_min + '/' + i.window.after_min + 'm')"></span>
+                        </template>
                         <template x-if="i.billed"><span class="text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5" x-text="'billed · ' + i.billed"></span></template>
                       </div>
                       <div class="text-sm text-slate-600" x-text="i.detail"></div>
@@ -190,8 +194,11 @@
                         </div>
                       </template>
 
-                      <template x-if="i.status === 'not_verified'">
-                        <div class="mt-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>, no staff photo check-in.<template x-if="i.billed"><b> This is billed.</b></template></div>
+                      <template x-if="i.status === 'due'">
+                        <div class="mt-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>. No staff photo check-in yet.<template x-if="i.billed"><b> This is billed.</b></template></div>
+                      </template>
+                      <template x-if="i.status === 'delayed'">
+                        <div class="mt-2 text-xs text-orange-800 bg-orange-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>, now past the ±<span x-text="i.window ? i.window.after_min : '?'"></span>-min window.<template x-if="i.billed"><b> This is billed.</b></template></div>
                       </template>
 
                       <template x-if="i.dispute">
@@ -208,7 +215,7 @@
                         </div>
                       </template>
                     </div>
-                    <template x-if="day === today && (i.status === 'verified' || i.status === 'not_verified')">
+                    <template x-if="day === today && (i.status === 'verified' || i.status === 'verified_late' || i.status === 'due' || i.status === 'delayed')">
                       <button @click="dispute(i)" class="self-start text-xs border border-slate-300 rounded-lg px-2 py-1 hover:bg-red-50 hover:border-red-300 whitespace-nowrap">This didn’t happen</button>
                     </template>
                   </li>

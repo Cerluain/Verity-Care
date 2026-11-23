@@ -408,8 +408,8 @@
               <div class="bg-white border border-slate-200 rounded-lg p-4">
                 <div class="flex items-center gap-2">
                   <span class="text-xs px-1.5 py-0.5 rounded font-medium"
-                        :class="r.kind === 'dispute' ? 'pill-red' : 'pill-yellow'"
-                        x-text="r.kind === 'dispute' ? 'disputed by family' : 'not verified'"></span>
+                        :class="{dispute:'pill-red', delayed:'pill-red', verified_late:'pill-yellow'}[r.kind] || 'pill-yellow'"
+                        x-text="{dispute:'disputed by family', delayed:'delayed', verified_late:'verified · late'}[r.kind] || r.kind"></span>
                   <span class="font-medium" x-text="r.title"></span>
                   <span class="text-xs text-slate-500 ml-auto" x-text="r.resident + ' · ' + r.time"></span>
                 </div>

@@ -18,6 +18,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import os
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -75,6 +76,68 @@ def _resident(rid: str) -> dict:
     return r
 
 
+# Per-category windows (minutes). Tighter for anything safety-critical, looser for
+# optional activities. See contexts/saswata.md "decisions log" (Nov 22) for rationale.
+# NOTE: medication is the tightest because insulin timing matters clinically.
+CATEGORY_WINDOW = {
+    "medication": (10, 10),   # ±10 min (insulin, scheduled meds)
+    "vitals":     (20, 30),   # morning rounds, slight slack
+    "meal":       (20, 20),   # breakfast tight; tray delivery + eating pace
+    "therapy":    (60, 120),  # PT/OT reschedules intraday
+    "activity":   (60, 180),  # optional, loose
+}
+CATEGORY_WINDOW_DEFAULT = (30, 60)
+
+
+def _hhmm_from_iso(iso: str) -> str | None:
+    """Extract local HH:MM from an ISO-like timestamp. Handles both UTC-Z and offset forms."""
+    if not iso:
+        return None
+    try:
+        # Python 3.11+ fromisoformat handles the 'Z' suffix fine.
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Convert to local wallclock so it compares apples-to-apples with scheduled HH:MM.
+        local = dt.astimezone()
+        return local.strftime("%H:%M")
+    except Exception:
+        m = re.search(r"T(\d{2}):(\d{2})", iso) or re.search(r"(\d{2}):(\d{2})", iso)
+        return f"{m.group(1)}:{m.group(2)}" if m else None
+
+
+def _mins_between(hhmm_a: str, hhmm_b: str) -> int:
+    """Signed minutes from a→b (negative = a is after b)."""
+    ah, am = int(hhmm_a[:2]), int(hhmm_a[-2:])
+    bh, bm = int(hhmm_b[:2]), int(hhmm_b[-2:])
+    return (bh * 60 + bm) - (ah * 60 + am)
+
+
+def _classify(scheduled_hhmm: str, now_hhmm: str, captured_hhmm: str | None,
+              category: str, day: str, today: str) -> str:
+    """Return status for a plan item under the window policy.
+    verified         → photo landed inside [scheduled-before, scheduled+after]
+    verified_late    → photo landed AFTER the window
+    upcoming         → clock hasn't reached scheduled-before yet (today only)
+    due              → clock is inside the window, no photo yet (today only)
+    delayed          → clock is past scheduled+after, no photo (today only, or any past day)
+    """
+    before, after = CATEGORY_WINDOW.get(category, CATEGORY_WINDOW_DEFAULT)
+    if captured_hhmm:
+        delta = _mins_between(scheduled_hhmm, captured_hhmm)   # positive = captured AFTER scheduled
+        return "verified_late" if delta > after else "verified"
+    # No photo yet.
+    if day < today:
+        return "delayed"
+    pre_start = _mins_between(now_hhmm, scheduled_hhmm)        # positive = scheduled is in the future
+    if pre_start > before:
+        return "upcoming"
+    past_end = _mins_between(scheduled_hhmm, now_hhmm) - after # positive = past the window end
+    if past_end > 0:
+        return "delayed"
+    return "due"
+
+
 def _items(rid: str, day: str) -> list[dict]:
     plan = [dict(x) for x in db().execute("SELECT * FROM care_plan WHERE resident_id=? ORDER BY time", (rid,))]
     ins = {x["plan_item_id"]: dict(x) for x in db().execute(
@@ -88,17 +151,16 @@ def _items(rid: str, day: str) -> list[dict]:
         ev, d = ins.get(p["id"]), dsp.get(p["id"])
         if d:
             d["route"] = json.loads(d.pop("route_json"))
+        captured = _hhmm_from_iso(ev.get("captured_at") or "") if ev else None
         if d:
             status = "disputed"
-        elif ev:
-            status = "verified"
-        elif day < today or p["time"] <= now:
-            status = "not_verified"
         else:
-            status = "upcoming"
+            status = _classify(p["time"], now, captured, p["category"], day, today)
         if ev and ev.get("staff_id") in staff:
             ev["staff"] = staff[ev["staff_id"]]
-        out.append({**p, "status": status, "event": ev, "dispute": d})
+        before, after = CATEGORY_WINDOW.get(p["category"], CATEGORY_WINDOW_DEFAULT)
+        out.append({**p, "status": status, "event": ev, "dispute": d,
+                    "window": {"before_min": before, "after_min": after}})
     return out
 
 
@@ -135,7 +197,8 @@ def timeline(rid: str, day: str | None = None):
         return {"resident": r, "day": day, "before_go_live": True, "go_live": go_live,
                 "demo_time": _now_hhmm(), "counts": {}, "items": []}
     items = _items(rid, day)
-    counts = {s: sum(i["status"] == s for i in items) for s in ("verified", "not_verified", "disputed", "upcoming")}
+    counts = {s: sum(i["status"] == s for i in items)
+              for s in ("verified", "verified_late", "due", "delayed", "disputed", "upcoming")}
     return {"resident": r, "day": day, "before_go_live": False, "go_live": go_live,
             "demo_time": _now_hhmm(), "counts": counts, "items": items}
 
@@ -277,8 +340,13 @@ def photo(eid: str):
 # ------------------------------------------------------------------ investigator side
 @router.get("/care/reports")
 def reports(facility_id: str):
-    """Only disputes the routing sent to the investigator (billed or repeated)."""
+    """Investigator-facing stream:
+       - family disputes that were routed to the investigator (billed or repeated)
+       - DELAYED or VERIFIED_LATE items, especially when the plan item is billed
+    Both shapes land in the investigator's GUARDIAN REPORTS tab.
+    """
     out = []
+    # 1. disputes
     for d in db().execute("""SELECT d.*, r.name AS resident, p.time, p.title, p.billed FROM disputes d
                              JOIN residents r ON r.id=d.resident_id JOIN care_plan p ON p.id=d.plan_item_id
                              WHERE r.facility_id=? ORDER BY d.created_at DESC""", (facility_id,)):
@@ -288,6 +356,24 @@ def reports(facility_id: str):
         if inv:
             out.append({"id": d["id"], "kind": "dispute", "resident": d["resident"], "time": d["time"],
                         "title": d["title"], "detail": f'Family: "{d["reason"]}" · {inv["label"]}'})
+
+    # 2. delayed / verified_late (today only — past days accumulate too much noise)
+    today = _today()
+    residents = [dict(x) for x in db().execute(
+        "SELECT id, name FROM residents WHERE facility_id=?", (facility_id,))]
+    for r in residents:
+        for i in _items(r["id"], today):
+            if i["status"] in ("delayed", "verified_late"):
+                if i["status"] == "delayed":
+                    detail = f'Scheduled {i["time"]}, past ±{i["window"]["after_min"]}-min window, no staff photo.'
+                else:
+                    cap = _hhmm_from_iso((i["event"] or {}).get("captured_at", "")) or "??:??"
+                    detail = f'Scheduled {i["time"]}, staff photo captured {cap} ({i["window"]["after_min"]}+ min late).'
+                if i.get("billed"):
+                    detail += f' Billed as {i["billed"]}.'
+                out.append({"id": f'late-{r["id"]}-{i["id"]}', "kind": i["status"],
+                            "resident": r["name"], "time": i["time"], "title": i["title"],
+                            "detail": detail})
     return {"reports": out}
 
 
