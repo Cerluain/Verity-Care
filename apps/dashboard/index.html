@@ -281,7 +281,15 @@ function dashboard() {
         this.aggregate_severity = sev.includes('red') ? 'red'
                                 : sev.includes('yellow') ? 'yellow'
                                 : sev.length ? 'green' : null;
-        // If any cards came pre-anchored (pending), start polling them.
+
+        // Rehydrate from chain: for every card without a chain_commit, compute the
+        // canonical hash and ask the onchain service if we've ever committed that
+        // hash. If yes, attach the chain_commit block from the authoritative local
+        // log + live chain receipt. This is why refresh "forgets nothing" — the
+        // chain IS the database.
+        await Promise.all(j.signals.map(c => this.rehydrateFromChain(c)));
+
+        // Any card that landed pre-anchored but not yet mined → start polling it.
         for (const c of j.signals) {
           if (c.chain_commit && c.chain_commit.tx_hash && !c.chain_commit.block_number) {
             this.startPolling(c);
@@ -289,6 +297,53 @@ function dashboard() {
         }
       } catch (e) { console.error(e); }
       this.loadingSpend = false;
+    },
+
+    async rehydrateFromChain(card) {
+      // Skip if the server already attached a chain_commit (e.g. Abhi pre-anchored).
+      if (card.chain_commit) return;
+      try {
+        const claim_hash = await this.canonicalHash(card);
+        const v = await fetch(
+          '/chain/verify/by-hash?claim_type=4&claim_hash=' + encodeURIComponent(claim_hash)
+        ).then(r => r.ok ? r.json() : null);
+        if (!v || !v.count || !v.matches?.length) return;
+
+        // Use the FIRST match (chronological order in the append-only log).
+        // Multiple matches would mean someone re-committed the same card, which is
+        // idempotent on-chain — any of them is equally valid proof.
+        const m = v.matches[0];
+        card.chain_commit = {
+          tx_hash: m.tx_hash,
+          explorer_url: m.explorer_url ?? null,
+          block_number: m.block_number ?? null,
+          committed_at: m.committed_at ?? null,
+          signer_role: m.signer_role ?? 'facility',
+          signer_address: m.signer_address ?? null,
+          mocked: !!m.mocked,
+          claim_hash,
+        };
+
+        // Local log may not have had block_number cached at commit time. Pull a
+        // chain receipt to backfill if this isn't a mock tx.
+        if (!card.chain_commit.block_number && !card.chain_commit.mocked
+            && card.chain_commit.tx_hash) {
+          try {
+            const r = await fetch('/chain/' + card.chain_commit.tx_hash).then(r => r.json());
+            if (r.verified && r.block_number) {
+              card.chain_commit.block_number = r.block_number;
+              card.chain_commit.signer_role = r.signer_role || card.chain_commit.signer_role;
+              card.chain_commit.signer_address = r.signer_address || card.chain_commit.signer_address;
+            }
+          } catch (_) { /* RPC hiccup; poller will retry when startPolling fires */ }
+        }
+        // Mock tx → treat as already-final so the UI shows green immediately.
+        if (card.chain_commit.mocked && !card.chain_commit.block_number) {
+          card.chain_commit.block_number = 'mock';
+        }
+      } catch (_) {
+        // Rehydration is best-effort; a failure just leaves the card as uncommitted.
+      }
     },
 
     shortHash(h) {
