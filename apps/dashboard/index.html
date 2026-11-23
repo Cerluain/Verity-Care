@@ -21,8 +21,25 @@
     .info-dot { display:inline-flex; align-items:center; justify-content:center;
                 width:14px; height:14px; border-radius:9999px;
                 background:#e2e8f0; color:#475569; font-size:9px; font-weight:700;
-                cursor:help; user-select:none; line-height:1; }
+                cursor:help; user-select:none; line-height:1;
+                position:relative; }
     .info-dot:hover { background:#cbd5e1; color:#1e293b; }
+    /* Custom hover popup — native title= tooltip is flaky on some browsers. */
+    .info-dot[data-tip]:hover::after {
+      content: attr(data-tip);
+      position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+      background:#0f172a; color:#f1f5f9; padding:8px 10px; border-radius:6px;
+      font-size:11px; font-weight:400; line-height:1.4; letter-spacing:0;
+      width:260px; white-space:normal; text-align:left; text-transform:none;
+      z-index:50; pointer-events:none;
+      box-shadow:0 4px 12px rgba(0,0,0,0.25);
+    }
+    .info-dot[data-tip]:hover::before {
+      content:""; position:absolute; bottom:calc(100% + 2px); left:50%;
+      transform:translateX(-50%);
+      border:6px solid transparent; border-top-color:#0f172a;
+      z-index:50; pointer-events:none;
+    }
     @keyframes pulse-slow { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
     .pulse { animation: pulse-slow 1.4s ease-in-out infinite; }
   </style>
@@ -235,32 +252,32 @@
                 </div>
                 <div class="grid grid-cols-6 gap-3 text-xs">
                   <div>
-                    <div class="text-slate-500 flex items-center gap-1">residents on drug <span class="info-dot" title="How many residents in this facility are prescribed this drug. Pulled from the facility's own PBJ + resident conditions data. Multiply by daily rate × 30 to get expected monthly consumption.">ⓘ</span></div>
+                    <div class="text-slate-500 flex items-center gap-1">residents on drug <span class="info-dot" data-tip="How many residents in this facility are prescribed this drug. Pulled from the facility's own PBJ + resident conditions data. Multiply by daily rate × 30 to get expected monthly consumption.">ⓘ</span></div>
                     <div class="font-semibold text-slate-800 mono" x-text="t.residents_on_drug"></div>
                     <div class="text-slate-400" x-text="'rate ' + t.rate_per_user_per_day + ' ' + t.unit + '/day'"></div>
                   </div>
                   <div>
-                    <div class="text-slate-500 flex items-center gap-1">expected / mo <span class="info-dot" title="Clinically-justified monthly quantity = residents_on_drug × rate_per_user_per_day × 30 days. The ceiling of what this facility should legitimately need to buy.">ⓘ</span></div>
+                    <div class="text-slate-500 flex items-center gap-1">expected / mo <span class="info-dot" data-tip="Clinically-justified monthly quantity = residents_on_drug × rate_per_user_per_day × 30 days. The ceiling of what this facility should legitimately need to buy.">ⓘ</span></div>
                     <div class="font-semibold text-slate-800 mono" x-text="t.expected_monthly_qty"></div>
                     <div class="text-slate-400">clinical</div>
                   </div>
                   <div>
-                    <div class="text-slate-500 flex items-center gap-1">invoiced <span class="info-dot" title="Quantity the facility billed Medicaid for this period, direct from the supplier invoice they uploaded + facility-wallet-signed on-chain. The facility cannot deny this number.">ⓘ</span></div>
+                    <div class="text-slate-500 flex items-center gap-1">invoiced <span class="info-dot" data-tip="Quantity the facility billed Medicaid for this period, direct from the supplier invoice they uploaded + facility-wallet-signed on-chain. The facility cannot deny this number.">ⓘ</span></div>
                     <div class="font-semibold text-slate-800 mono" x-text="t.invoiced_qty"></div>
                     <div class="text-slate-400" x-text="'@$' + t.unit_price.toFixed(2)"></div>
                   </div>
                   <div>
-                    <div class="text-slate-500 flex items-center gap-1">NADAC fair price <span class="info-dot" title="CMS National Average Drug Acquisition Cost — the price US pharmacies actually paid wholesale, published weekly by CMS. The industry benchmark for 'fair price'. Facility charging materially more than NADAC = overbilling.">ⓘ</span></div>
+                    <div class="text-slate-500 flex items-center gap-1">NADAC fair price <span class="info-dot" data-tip="CMS National Average Drug Acquisition Cost — the price US pharmacies actually paid wholesale, published weekly by CMS. The industry benchmark for 'fair price'. Facility charging materially more than NADAC = overbilling.">ⓘ</span></div>
                     <div class="font-semibold text-slate-800 mono" x-text="'$' + (t.ref_price_nadac || 0).toFixed(2)"></div>
                     <div class="text-slate-400">CMS Nov 2026</div>
                   </div>
                   <div>
-                    <div class="text-slate-500 flex items-center gap-1">on-hand Δ <span class="info-dot" title="Physical cabinet count: start-of-month → end-of-month. 'implied' below = total vials that physically left the building this period (invoiced + start − end). Ties the paper invoice to physical reality.">ⓘ</span></div>
+                    <div class="text-slate-500 flex items-center gap-1">on-hand Δ <span class="info-dot" data-tip="Physical cabinet count: start-of-month → end-of-month. 'implied' below = total vials that physically left the building this period (invoiced + start − end). Ties the paper invoice to physical reality.">ⓘ</span></div>
                     <div class="font-semibold text-slate-800 mono" x-text="t.inventory_start + '→' + t.inventory_end"></div>
                     <div class="text-slate-400" x-text="'implied ' + t.implied_consumption"></div>
                   </div>
                   <div>
-                    <div class="text-slate-500 flex items-center gap-1">disparity <span class="info-dot" title="Fraud math punchline. Top number = invoiced − expected (excess vials billed beyond clinical need). Bottom number = markup multiplier vs NADAC. Both numbers red = hard fraud signal.">ⓘ</span></div>
+                    <div class="text-slate-500 flex items-center gap-1">disparity <span class="info-dot" data-tip="Fraud math punchline. Top number = invoiced − expected (excess vials billed beyond clinical need). Bottom number = markup multiplier vs NADAC. Both numbers red = hard fraud signal.">ⓘ</span></div>
                     <div class="font-semibold mono" :class="t.excess_qty > 0 ? 'text-red-700' : 'text-slate-800'"
                          x-text="(t.excess_qty > 0 ? '+' : '') + t.excess_qty + ' ' + t.unit"></div>
                     <div class="font-semibold mono" :class="t.markup_x > 1.5 ? 'text-red-700' : 'text-amber-700'"
@@ -529,7 +546,7 @@
               <div>
                 <div class="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
                   inventory anchors
-                  <span class="info-dot" title="How many monthly inventory snapshots the facility operator has uploaded and signed on-chain. Each snapshot = one pharmacy invoice + cabinet count, hashed and committed to Base Sepolia by the facility's own wallet. The number below each is 'on-chain (facility)' — meaning the facility can't deny they signed it.">ⓘ</span>
+                  <span class="info-dot" data-tip="How many monthly inventory snapshots the facility operator has uploaded and signed on-chain. Each snapshot = one pharmacy invoice + cabinet count, hashed and committed to Base Sepolia by the facility's own wallet. The number below each is 'on-chain (facility)' — meaning the facility can't deny they signed it.">ⓘ</span>
                 </div>
                 <div class="text-2xl font-semibold" x-text="snapshotCards.length"></div>
                 <div class="text-xs text-slate-500" x-text="snapshotCards.filter(s => s.block_number && !s.mocked).length + ' on-chain (facility)'"></div>
@@ -537,7 +554,7 @@
               <div>
                 <div class="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
                   phantom spend
-                  <span class="info-dot" title="Estimated dollar amount this facility is overbilling Medicaid per month, summed across all drugs. Combines two numbers: excess spend (vials billed beyond clinical demand × unit price) and markup overpayment ((unit_price − NADAC) × qty). Red tile count = drugs where both signals fire; yellow = one signal fires.">ⓘ</span>
+                  <span class="info-dot" data-tip="Estimated dollar amount this facility is overbilling Medicaid per month, summed across all drugs. Combines two numbers: excess spend (vials billed beyond clinical demand × unit price) and markup overpayment ((unit_price − NADAC) × qty). Red tile count = drugs where both signals fire; yellow = one signal fires.">ⓘ</span>
                 </div>
                 <div class="text-2xl font-semibold" x-text="drug.data?.roll_up ? ('$' + (drug.data.roll_up.combined_phantom_spend || 0).toLocaleString('en-US',{maximumFractionDigits:0})) : '—'"></div>
                 <div class="text-xs text-slate-500" x-text="drug.data?.roll_up ? ((drug.data?.tiles || []).filter(t => t.severity === 'red').length + ' red · ' + (drug.data?.tiles || []).filter(t => t.severity === 'yellow').length + ' yellow') : 'no snapshot yet'"></div>
@@ -545,7 +562,7 @@
               <div>
                 <div class="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
                   guardian flags
-                  <span class="info-dot" title="Issues raised by residents' families via the guardian app. 'disputed' = family actively challenged a care event ('Dad says he didn't get his insulin'). 'delayed' = care task missed its clinical time window (e.g. meal served >20min late, med given >10min late). Both hit the investigator's desk through /care/reports.">ⓘ</span>
+                  <span class="info-dot" data-tip="Issues raised by residents' families via the guardian app. 'disputed' = family actively challenged a care event ('Dad says he didn't get his insulin'). 'delayed' = care task missed its clinical time window (e.g. meal served >20min late, med given >10min late). Both hit the investigator's desk through /care/reports.">ⓘ</span>
                 </div>
                 <div class="text-2xl font-semibold" x-text="guardianReports.length"></div>
                 <div class="text-xs text-slate-500" x-text="guardianReports.filter(r => (r.kind||'')==='dispute').length + ' disputed · ' + guardianReports.filter(r => (r.kind||'')==='delayed').length + ' delayed'"></div>
@@ -553,7 +570,7 @@
               <div>
                 <div class="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
                   prior sign-offs
-                  <span class="info-dot" title="How many times an MFCU investigator has previously reviewed this facility and signed a case-file envelope on-chain (claim_type=3, verity_service wallet). Each sign-off is a cryptographic proof that someone looked at the evidence on a specific date. The audit timeline below shows every one with its Basescan link.">ⓘ</span>
+                  <span class="info-dot" data-tip="How many times an MFCU investigator has previously reviewed this facility and signed a case-file envelope on-chain (claim_type=3, verity_service wallet). Each sign-off is a cryptographic proof that someone looked at the evidence on a specific date. The audit timeline below shows every one with its Basescan link.">ⓘ</span>
                 </div>
                 <div class="text-2xl font-semibold" x-text="caseFileHistory.length"></div>
                 <div class="text-xs text-slate-500" x-text="caseFileHistory.length ? ('last ' + relativeTime(caseFileHistory[0].committed_at)) : 'first review'"></div>
