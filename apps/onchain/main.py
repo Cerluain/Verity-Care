@@ -379,8 +379,8 @@ def get_commit(tx_hash: str):
 def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
     """Return every commit matching a claim_hash (and optionally claim_type).
     Draws from the local append-only log — authoritative for what this service has committed.
-    For cross-service verification the caller should also inspect each tx on-chain via
-    the explorer_url or GET /commit/{tx_hash}."""
+    Backfills block_number from the chain for any match whose log row was written before
+    the tx got mined, so the UI's rehydrate flow gets a complete record in one call."""
     if not claim_hash:
         raise HTTPException(400, "claim_hash is required")
     if not claim_hash.startswith("0x") or len(claim_hash) != 66:
@@ -399,6 +399,23 @@ def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
                 if claim_type is not None and row.get("claim_type") != claim_type:
                     continue
                 matches.append(row)
+
+    # Backfill block numbers from the chain so the client doesn't have to poll.
+    if not MOCK and _w3 is not None:
+        for row in matches:
+            if row.get("block_number") or row.get("mocked"):
+                continue
+            tx = row.get("tx_hash")
+            if not tx:
+                continue
+            try:
+                receipt = _w3.eth.get_transaction_receipt(tx)
+            except Exception:
+                continue  # not yet mined
+            event = _event_from_receipt(receipt, tx)
+            if event and event.get("block_number"):
+                row["block_number"] = event["block_number"]
+                row["block_timestamp"] = event.get("block_timestamp")
 
     return {
         "claim_hash": claim_hash,
@@ -484,13 +501,51 @@ def _pinata_upload_json(payload: dict, name: str) -> str:
     return cid
 
 
+# Backend defaults for /delivery: single source of truth used both by the
+# fill-in path (when the UI POSTs blanks) and by GET /delivery/defaults so
+# the UI can show the exact values it'll receive.
+_DEFAULT_PATIENTS = ["patient-A17", "patient-B04", "patient-C22", "patient-D09", "patient-E11"]
+_DEFAULT_STAFF = ["staff-003", "staff-012", "staff-027", "staff-041"]
+_DEFAULT_SERVICES = [
+    ("meal", "dinner tray — pureed, low-sodium"),
+    ("insulin", "humalog 10u subq, left thigh"),
+    ("medication", "metformin 500mg PO"),
+    ("visit", "RN wellness check, 10 min"),
+    ("wound_dressing", "sacral stage-2, dressing change"),
+]
+
+
+def _rotating_defaults() -> dict:
+    """Return a snapshot of the default values a bare /delivery POST would use
+    right now. Deterministic by second-of-epoch so UI pre-fill matches what
+    the backend would substitute if submitted immediately."""
+    import time as _time
+    idx = int(_time.time())
+    svc, detail = _DEFAULT_SERVICES[idx % len(_DEFAULT_SERVICES)]
+    return {
+        "facility_id": "buffalo-center-centers-health",
+        "patient_pseudonym": _DEFAULT_PATIENTS[idx % len(_DEFAULT_PATIENTS)],
+        "staff_pseudonym": _DEFAULT_STAFF[idx % len(_DEFAULT_STAFF)],
+        "service_type": svc,
+        "service_detail": detail,
+    }
+
+
+@app.get("/delivery/defaults")
+def delivery_defaults():
+    """Values the UI should pre-fill into the form. Hitting submit with these
+    exact values produces the same on-chain record as hitting submit with all
+    fields blank. The point: the UI always shows what the backend would do."""
+    return _rotating_defaults()
+
+
 @app.post("/delivery")
 async def delivery(
-    facility_id: str = Form(...),
-    patient_pseudonym: str = Form(...),
-    service_type: str = Form(...),     # "meal", "insulin", "medication", "visit", etc.
-    service_detail: str = Form(""),    # "lunch tray #C-3", "humalog 10u", etc.
-    staff_pseudonym: str = Form(...),  # "staff-003" — never a real name (PHI)
+    facility_id: str = Form("buffalo-center-centers-health"),
+    patient_pseudonym: str = Form(""),
+    service_type: str = Form(""),       # "meal", "insulin", "medication", "visit", etc.
+    service_detail: str = Form(""),     # "lunch tray #C-3", "humalog 10u", etc.
+    staff_pseudonym: str = Form(""),    # "staff-003" — never a real name (PHI)
     delivered_at: Optional[str] = Form(None),  # ISO-8601; defaults to now
     image: UploadFile = File(...),
 ):
@@ -502,7 +557,27 @@ async def delivery(
     4. sha256(canonical(metadata)) → claim_hash
     5. commit(5, claim_hash) via STAFF signer
     6. Return everything so the dashboard can render the proof card.
+
+    Empty fields get filled from _rotating_defaults() so the UI can display
+    identical pre-fill via GET /delivery/defaults and still work if submitted
+    blank.
     """
+    defaults = _rotating_defaults()
+    if not patient_pseudonym:
+        patient_pseudonym = defaults["patient_pseudonym"]
+    if not staff_pseudonym:
+        staff_pseudonym = defaults["staff_pseudonym"]
+    if not service_type:
+        service_type = defaults["service_type"]
+        if not service_detail:
+            service_detail = defaults["service_detail"]
+    elif not service_detail:
+        # service_type explicit but detail blank — fill the detail that matches,
+        # falling back to the current rotation's detail if no mapping.
+        for st, detail in _DEFAULT_SERVICES:
+            if st == service_type:
+                service_detail = detail
+                break
     # Read + hash the image bytes once.
     image_bytes = await image.read()
     if not image_bytes:
@@ -616,12 +691,15 @@ async def delivery(
 
 @app.get("/deliveries")
 def list_deliveries(facility_id: Optional[str] = None, limit: int = 50):
-    """Replay proof-of-service records from the local log. Dashboard uses this
-    to populate the Proof-of-Service tab. Chain is the source of truth, but
-    this is cached because it also returns the off-chain IPFS URLs."""
+    """Replay proof-of-service records from the local log. Backfills block numbers
+    from the chain for any row whose tx has mined since it was written — this
+    way the UI never has to poll for confirmation, and refresh works.
+
+    Chain is the source of truth, but this response is the fast cache because it
+    also includes the off-chain IPFS URLs."""
     if not LOG_FILE.exists():
         return []
-    out = []
+    rows: list[dict] = []
     with LOG_FILE.open() as f:
         for line in f:
             try:
@@ -632,6 +710,31 @@ def list_deliveries(facility_id: Optional[str] = None, limit: int = 50):
                 continue
             if facility_id and row.get("facility_id") != facility_id:
                 continue
-            out.append(row)
-    return out[-limit:][::-1]  # newest-first
+            rows.append(row)
+
+    # Newest-first slice before resolving to minimize chain calls.
+    rows = rows[-limit:][::-1]
+
+    # Resolve pending block_numbers against the chain. Non-mocked rows only.
+    if not MOCK and _w3 is not None:
+        for row in rows:
+            if row.get("block_number") or row.get("mocked"):
+                continue
+            tx = row.get("tx_hash")
+            if not tx:
+                continue
+            try:
+                receipt = _w3.eth.get_transaction_receipt(tx)
+            except Exception:
+                continue  # not yet mined
+            event = _event_from_receipt(receipt, tx)
+            if event and event.get("block_number"):
+                row["block_number"] = event["block_number"]
+                row["block_timestamp"] = event.get("block_timestamp")
+                # Also overwrite signer_role/address if the chain disambiguates.
+                if event.get("signer_role"):
+                    row["signer_role"] = event["signer_role"]
+                if event.get("signer_address"):
+                    row["signer_address"] = event["signer_address"]
+    return rows
 

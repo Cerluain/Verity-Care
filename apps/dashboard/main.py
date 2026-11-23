@@ -130,6 +130,12 @@ def chain_health():
         return JSONResponse({"ok": False, "error": str(e)}, status_code=503)
 
 
+@app.get("/delivery/defaults")
+def delivery_defaults():
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/delivery/defaults")
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.post("/delivery")
 async def delivery(req: Request):
     """Multipart proxy to apps/onchain /delivery.

@@ -376,8 +376,123 @@
       </template>
 
       <template x-if="selected && activeTab === 'proof of service'">
-        <div class="text-slate-500">
-          Staff uploads service-delivery photos here (meal, insulin, visit). Each upload → IPFS → metadata JSON → on-chain commit signed by the staff wallet. Verifier fetches metadata from IPFS and recomputes <code class="mono">sha256(canonical(metadata))</code> to match the on-chain hash. Abhi designing this view; backend endpoints <code class="mono">POST /delivery</code> and <code class="mono">GET /deliveries?facility_id=…</code> are live.
+        <div class="space-y-6">
+          <!-- Upload form -->
+          <form @submit.prevent="submitDelivery()"
+                class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+            <div class="text-xs tracking-wider uppercase text-slate-500 mb-3">Record a delivery</div>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex flex-col text-xs text-slate-500">
+                Patient pseudonym
+                <input x-model="pos.form.patient_pseudonym" required
+                       class="mt-1 border border-slate-300 rounded px-2 py-1 text-sm text-slate-900">
+              </label>
+              <label class="flex flex-col text-xs text-slate-500">
+                Staff pseudonym
+                <input x-model="pos.form.staff_pseudonym" required
+                       class="mt-1 border border-slate-300 rounded px-2 py-1 text-sm text-slate-900">
+              </label>
+              <label class="flex flex-col text-xs text-slate-500">
+                Service type
+                <select x-model="pos.form.service_type" required
+                        class="mt-1 border border-slate-300 rounded px-2 py-1 text-sm text-slate-900">
+                  <option value="meal">meal</option>
+                  <option value="insulin">insulin</option>
+                  <option value="medication">medication</option>
+                  <option value="visit">visit</option>
+                  <option value="wound_dressing">wound dressing</option>
+                  <option value="pt_session">PT session</option>
+                </select>
+              </label>
+              <label class="flex flex-col text-xs text-slate-500">
+                Service detail
+                <input x-model="pos.form.service_detail" required
+                       class="mt-1 border border-slate-300 rounded px-2 py-1 text-sm text-slate-900">
+              </label>
+              <label class="flex flex-col text-xs text-slate-500 col-span-2">
+                Photo
+                <input type="file" accept="image/*" required
+                       x-ref="posFile"
+                       class="mt-1 text-sm text-slate-900">
+              </label>
+            </div>
+            <div class="mt-4 flex items-center gap-3">
+              <button type="submit" :disabled="pos.uploading"
+                      class="bg-slate-900 text-white rounded px-3 py-1 text-sm font-medium hover:bg-slate-700 disabled:bg-slate-400">
+                <span x-text="pos.uploading ? 'uploading…' : 'Submit & anchor on-chain'"></span>
+              </button>
+              <template x-if="pos.error">
+                <span class="text-xs text-red-600" x-text="pos.error"></span>
+              </template>
+            </div>
+          </form>
+
+          <!-- Proof cards -->
+          <template x-if="pos.loading">
+            <div class="text-slate-500">Loading deliveries…</div>
+          </template>
+          <template x-if="!pos.loading && pos.deliveries.length === 0">
+            <div class="text-slate-500">No delivery proofs for this facility yet. Submit one above.</div>
+          </template>
+
+          <div class="grid grid-cols-2 gap-4" x-show="pos.deliveries.length">
+            <template x-for="d in pos.deliveries" :key="d.tx_hash">
+              <article class="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                <div class="bg-slate-50 aspect-video flex items-center justify-center">
+                  <template x-if="d.image_url && d.pin_mode === 'pinata'">
+                    <img :src="d.image_url" :alt="d.service_type"
+                         class="max-h-full max-w-full object-contain">
+                  </template>
+                  <template x-if="d.pin_mode !== 'pinata'">
+                    <div class="text-center text-slate-400 text-xs p-4">
+                      <div class="mono mb-1" x-text="d.image_cid"></div>
+                      <div>(mock CID — Pinata JWT not set)</div>
+                    </div>
+                  </template>
+                </div>
+                <div class="p-4 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm font-semibold capitalize" x-text="d.service_type.replace(/_/g,' ')"></div>
+                    <div class="text-xs text-slate-500" x-text="new Date(d.delivered_at).toLocaleString()"></div>
+                  </div>
+                  <template x-if="d.service_detail">
+                    <div class="text-sm text-slate-600" x-text="d.service_detail"></div>
+                  </template>
+                  <div class="text-xs text-slate-500">
+                    patient <span class="mono text-slate-700" x-text="d.patient_pseudonym"></span>
+                    · staff <span class="mono text-slate-700" x-text="d.staff_pseudonym"></span>
+                  </div>
+
+                  <!-- Chain row -->
+                  <div class="pt-2 mt-2 border-t border-slate-100 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <template x-if="d.block_number">
+                      <span class="pill-green px-2 py-0.5 rounded font-medium">✓ on-chain</span>
+                    </template>
+                    <template x-if="!d.block_number">
+                      <span class="pill-yellow px-2 py-0.5 rounded font-medium pulse">⏳ pending</span>
+                    </template>
+                    <span class="text-slate-500">signer <span class="font-medium text-slate-700" x-text="d.signer_role || 'staff'"></span></span>
+                    <template x-if="d.block_number && d.block_number !== 'mock'">
+                      <span class="text-slate-500">block <span class="font-medium text-slate-700" x-text="d.block_number"></span></span>
+                    </template>
+                    <span class="mono text-slate-400" x-text="shortHash(d.tx_hash)"></span>
+                    <template x-if="d.explorer_url">
+                      <a :href="d.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                    </template>
+                  </div>
+                  <div class="text-xs text-slate-400 flex flex-wrap gap-x-3">
+                    <span>claim hash <span class="mono" x-text="shortHash(d.claim_hash)"></span></span>
+                    <template x-if="d.metadata_url && d.pin_mode === 'pinata'">
+                      <a :href="d.metadata_url" target="_blank" class="text-blue-600 hover:underline">metadata on IPFS ↗</a>
+                    </template>
+                    <template x-if="d.image_url && d.pin_mode === 'pinata'">
+                      <a :href="d.image_url" target="_blank" class="text-blue-600 hover:underline">image on IPFS ↗</a>
+                    </template>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
         </div>
       </template>
 
@@ -405,6 +520,13 @@ function dashboard() {
     batchCommitting: false,
     batchProgress: '',
     _pollers: {},        // { tx_hash: intervalId } — global map
+    pos: {
+      form: { patient_pseudonym: '', staff_pseudonym: '', service_type: '', service_detail: '' },
+      deliveries: [],
+      loading: false,
+      uploading: false,
+      error: null,
+    },
 
     async init() {
       try {
@@ -426,6 +548,9 @@ function dashboard() {
       this.spend = { signals: [] };
       this.aggregate_severity = null;
       this.loadingSpend = true;
+      this.pos.deliveries = [];
+      this.pos.error = null;
+      this.loadDeliveries(f.id);
       try {
         const j = await fetch('/spend/' + f.id).then(r => r.json());
         j.signals = (j.signals || []).map(c => ({ ...c, _committing: false, _verify: null }));
@@ -623,6 +748,98 @@ function dashboard() {
       }
       this.batchCommitting = false;
       this.batchProgress = '';
+    },
+
+    async loadDeliveries(facilityId) {
+      this.pos.loading = true;
+      // Pre-fill form from the backend's current default rotation so the
+      // staff sees the exact values that would be committed on submit.
+      try {
+        const def = await fetch('/delivery/defaults').then(r => r.json());
+        this.pos.form.patient_pseudonym = def.patient_pseudonym || '';
+        this.pos.form.staff_pseudonym   = def.staff_pseudonym   || '';
+        this.pos.form.service_type      = def.service_type      || 'meal';
+        this.pos.form.service_detail    = def.service_detail    || '';
+      } catch (_) {}
+      try {
+        const r = await fetch('/deliveries?facility_id=' + encodeURIComponent(facilityId));
+        if (r.ok) {
+          this.pos.deliveries = await r.json();
+          // Backfill block numbers for anything whose local log row was
+          // written before the tx got mined. Each pending record gets the
+          // same auto-polling treatment as a fresh upload.
+          for (const d of this.pos.deliveries) {
+            if (d.tx_hash && !d.block_number && !d.mocked) {
+              this.pollDelivery(d);
+            }
+          }
+        }
+      } catch (_) {}
+      this.pos.loading = false;
+    },
+
+    async refreshFormDefaults() {
+      try {
+        const def = await fetch('/delivery/defaults').then(r => r.json());
+        this.pos.form.patient_pseudonym = def.patient_pseudonym || '';
+        this.pos.form.staff_pseudonym   = def.staff_pseudonym   || '';
+        this.pos.form.service_type      = def.service_type      || 'meal';
+        this.pos.form.service_detail    = def.service_detail    || '';
+      } catch (_) {}
+    },
+
+    async submitDelivery() {
+      if (!this.selected) return;
+      const fileEl = this.$refs.posFile;
+      if (!fileEl || !fileEl.files || !fileEl.files[0]) {
+        this.pos.error = 'pick a photo first';
+        return;
+      }
+      this.pos.error = null;
+      this.pos.uploading = true;
+      try {
+        const fd = new FormData();
+        fd.append('facility_id', this.selected.id);
+        fd.append('patient_pseudonym', this.pos.form.patient_pseudonym);
+        fd.append('staff_pseudonym', this.pos.form.staff_pseudonym);
+        fd.append('service_type', this.pos.form.service_type);
+        fd.append('service_detail', this.pos.form.service_detail || '');
+        fd.append('image', fileEl.files[0]);
+        const r = await fetch('/delivery', { method: 'POST', body: fd });
+        if (!r.ok) throw new Error(await r.text());
+        const rec = await r.json();
+        // Prepend so newest-first ordering holds.
+        this.pos.deliveries = [rec, ...this.pos.deliveries];
+        // Poll for block confirmation.
+        this.pollDelivery(rec);
+        // Reset form (pull a fresh rotation from the backend so the next
+        // submission gets a new patient/service pair without reusing prior).
+        fileEl.value = '';
+        this.refreshFormDefaults();
+      } catch (e) {
+        this.pos.error = String(e.message || e).slice(0, 200);
+      }
+      this.pos.uploading = false;
+    },
+
+    pollDelivery(rec) {
+      if (!rec.tx_hash || rec.block_number) return;
+      const key = rec.tx_hash;
+      if (this._pollers[key]) return;
+      const poll = async () => {
+        try {
+          const r = await fetch('/chain/' + rec.tx_hash).then(r => r.json());
+          if (r.verified && r.block_number) {
+            rec.block_number = r.block_number;
+            rec.signer_role = r.signer_role || rec.signer_role;
+            rec.signer_address = r.signer_address || rec.signer_address;
+            clearInterval(this._pollers[key]);
+            delete this._pollers[key];
+          }
+        } catch (_) {}
+      };
+      poll();
+      this._pollers[key] = setInterval(poll, 3000);
     },
   };
 }
