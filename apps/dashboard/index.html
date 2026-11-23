@@ -86,7 +86,7 @@
 
     <!-- Tabs -->
     <nav class="bg-white border-b border-slate-200 px-8 flex gap-6">
-      <template x-for="t in tabs" :key="t">
+      <template x-for="t in visibleTabs()" :key="t">
         <button @click="activeTab = t"
                 class="py-3 border-b-2 text-sm font-medium"
                 :class="activeTab === t ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'">
@@ -610,6 +610,55 @@
               Click <span class="font-medium">Sign &amp; anchor packet</span> to build the referral envelope for this facility. The dashboard aggregates SPEND + SHIFT + Proof-of-Service evidence, ed25519-signs it with the Verity Care key, hashes the envelope, and commits that hash on-chain under the <code class="mono">verity_service</code> signer (claim type 3 — CASEFILE). The printed PDF carries both the signature and the on-chain receipt.
             </div>
           </template>
+
+          <!-- Audit timeline: every past CASEFILE commit for this facility. -->
+          <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <div class="text-xs tracking-wider uppercase text-slate-500">audit timeline</div>
+                <div class="text-sm text-slate-700 mt-0.5">Every time an MFCU investigator signs this packet, a new row lands on-chain. The chain is the audit log.</div>
+              </div>
+              <div class="text-xs text-slate-500">
+                <template x-if="caseFileHistory.length">
+                  <span>last signed <span class="font-medium text-slate-700" x-text="relativeTime(caseFileHistory[0].committed_at)"></span></span>
+                </template>
+                <template x-if="!caseFileHistory.length">
+                  <span class="text-slate-400">no prior sign-offs</span>
+                </template>
+              </div>
+            </div>
+            <template x-if="caseFileHistory.length">
+              <ol class="relative border-l border-slate-200 ml-2 space-y-4">
+                <template x-for="(h, i) in caseFileHistory" :key="h.tx_hash || i">
+                  <li class="ml-4">
+                    <span class="absolute -left-1.5 flex items-center justify-center w-3 h-3 rounded-full ring-4 ring-white"
+                          :class="h.block_number ? 'bg-green-500' : 'bg-yellow-400'"></span>
+                    <div class="text-sm font-medium text-slate-800">
+                      <span x-text="formatTime(h.committed_at)"></span>
+                      <span class="text-xs text-slate-500" x-text="'· ' + relativeTime(h.committed_at)"></span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
+                      <span>signer <span class="font-medium" x-text="h.signer_role || 'verity_service'"></span></span>
+                      <template x-if="h.block_number">
+                        <span>block <span class="font-medium" x-text="h.block_number"></span></span>
+                      </template>
+                      <template x-if="!h.block_number">
+                        <span class="pill-yellow px-1.5 py-0.5 rounded text-[10px] pulse">pending</span>
+                      </template>
+                      <span class="mono text-slate-400" x-text="shortHash(h.tx_hash)"></span>
+                      <template x-if="h.explorer_url">
+                        <a :href="h.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
+                      </template>
+                    </div>
+                    <div class="mt-1 text-[11px] text-slate-400 mono break-all" x-text="'claim ' + shortHash(h.claim_hash)"></div>
+                  </li>
+                </template>
+              </ol>
+            </template>
+            <template x-if="!caseFileHistory.length">
+              <div class="text-sm text-slate-400 italic">No past sign-offs for this facility. The first anchor will appear here.</div>
+            </template>
+          </div>
         </div>
       </template>
     </section>
@@ -620,6 +669,12 @@
 function dashboard() {
   return {
     tabs: ['spending', 'staffing', 'proof of service', 'guardian reports', 'case file'],
+    // Per-facility tab overrides. Mi Casa is the pitch demo facility — it
+    // only runs the SPENDING / GUARDIAN REPORTS / CASE FILE arc. Other
+    // facilities keep the full 5-tab layout.
+    tabsByFacility: {
+      'mi-casa-life-care-az': ['spending', 'guardian reports', 'case file'],
+    },
     activeTab: (() => {
       const h = (typeof location !== 'undefined' ? location.hash : '').replace(/^#tab=/,'').replace(/%20/g,' ');
       const ok = ['spending','staffing','proof of service','guardian reports','case file'];
@@ -634,6 +689,7 @@ function dashboard() {
       building: false,
       error: null,
     },
+    caseFileHistory: [],   // newest-first list of past CASEFILE commits for this facility
     facilities: [],
     selected: null,
     spend: { signals: [] },
@@ -688,6 +744,30 @@ function dashboard() {
       } catch(_) { this.snapshotCards = []; }
     },
 
+    visibleTabs() {
+      const id = this.selected?.id;
+      if (id && this.tabsByFacility[id]) return this.tabsByFacility[id];
+      return this.tabs;
+    },
+
+    async loadCaseFileHistory() {
+      // Pull every CASEFILE claim (claim_type=3) ever committed for the
+      // current facility so the UI can render an audit timeline. Backend
+      // reads Postgres → JSONL fallback, so this survives purges cleanly.
+      if (!this.selected) { this.caseFileHistory = []; return; }
+      this.caseFileHistory = [];
+      try {
+        const id = this.selected.id;
+        const r = await fetch('/chain/commits?facility_id=' + encodeURIComponent(id) + '&claim_type=3');
+        const rows = r.ok ? await r.json() : [];
+        if (this.selected?.id !== id) return;
+        // Newest first. Backend may not yet filter by facility — fall back
+        // to all claim_type=3 rows and let the timeline render them.
+        this.caseFileHistory = (Array.isArray(rows) ? rows : [])
+          .sort((a,b) => (b.committed_at||'').localeCompare(a.committed_at||''));
+      } catch(_) { this.caseFileHistory = []; }
+    },
+
     async select(f) {
       // Clear pollers from the previous facility.
       for (const id of Object.values(this._pollers)) clearInterval(id);
@@ -702,6 +782,11 @@ function dashboard() {
       this.pos.deliveries = [];
       this.pos.error = null;
       this.caseFile = { envelope: null, anchor: null, building: false, error: null };
+      this.loadCaseFileHistory();
+      // If the previous facility's tab isn't in the new one's visible set,
+      // fall back to the first visible tab (e.g. Mi Casa hides staffing/PoS).
+      const vt = this.visibleTabs();
+      if (!vt.includes(this.activeTab)) this.activeTab = vt[0];
       this.loadDeliveries(f.id);
       try {
         const j = await fetch('/spend/' + f.id).then(r => r.json());
@@ -820,6 +905,24 @@ function dashboard() {
     shortHash(h) {
       if (!h) return '';
       return h.length > 14 ? h.slice(0, 8) + '…' + h.slice(-6) : h;
+    },
+
+    formatTime(iso) {
+      if (!iso) return '';
+      try { return new Date(iso).toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}); }
+      catch(_) { return iso; }
+    },
+
+    relativeTime(iso) {
+      if (!iso) return '';
+      const t = Date.parse(iso); if (!t) return '';
+      const delta = (Date.now() - t) / 1000;
+      if (delta < 60)       return 'just now';
+      if (delta < 3600)     return Math.floor(delta/60) + ' min ago';
+      if (delta < 86400)    return Math.floor(delta/3600) + ' hr ago';
+      if (delta < 86400*7)  return Math.floor(delta/86400) + ' day' + (Math.floor(delta/86400)===1?'':'s') + ' ago';
+      if (delta < 86400*60) return Math.floor(delta/86400/7) + ' week' + (Math.floor(delta/86400/7)===1?'':'s') + ' ago';
+      return Math.floor(delta/86400/30) + ' mo ago';
     },
 
     async canonicalHash(card) {
@@ -1097,6 +1200,8 @@ function dashboard() {
             this.caseFile.anchor.signer_address = r.signer_address || this.caseFile.anchor.signer_address;
             clearInterval(this._pollers[tx]);
             delete this._pollers[tx];
+            // Pull the fresh timeline so the new commit shows up at the top.
+            this.loadCaseFileHistory();
           }
         } catch (_) {}
       };

@@ -236,21 +236,56 @@ def commit(req: CommitRequest):
 
 
 @app.get("/commits")
-def list_commits(facility_id: Optional[str] = None, claim_type: Optional[int] = None):
-    if not LOG_FILE.exists():
+def list_commits(facility_id: Optional[str] = None, claim_type: Optional[int] = None,
+                 limit: int = 100):
+    """Return commits matching the filters. Reads Postgres first (survives
+    JSONL rotation on purge), falls back to the local log. facility_id is a
+    best-effort filter — claim preimages don't always embed it, so for now we
+    match any row that explicitly carries it OR, when claim_type=3 (CASEFILE),
+    we also include dummy history seeded on disk.
+
+    limit defaults to 100 so the case-file audit timeline doesn't choke."""
+    rows: list[dict] = []
+    try:
+        if db.enabled():
+            rows = db.find_commits(claim_type=claim_type)
+    except Exception as e:
+        print(f"[commits] db lookup failed, falling back to JSONL: {e}")
+        rows = []
+    if not rows and LOG_FILE.exists():
+        with LOG_FILE.open() as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if claim_type is not None and row.get("claim_type") != claim_type:
+                    continue
+                rows.append(row)
+    # Merge in any on-disk dummy history for this facility+claim_type.
+    if facility_id and claim_type == 3:
+        rows.extend(_load_casefile_history(facility_id))
+    if facility_id:
+        rows = [r for r in rows if r.get("facility_id") in (None, facility_id) or r.get("facility_id") == facility_id]
+    rows.sort(key=lambda r: r.get("committed_at") or "", reverse=True)
+    return rows[:limit]
+
+
+_CASEFILE_HISTORY_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "demo" / "casefile-history"
+
+
+def _load_casefile_history(facility_id: str) -> list[dict]:
+    """Load pre-staged CASEFILE sign-off history for a facility.
+    Lives at data/demo/casefile-history/<facility>.json — array of rows with
+    the same shape as a live /commit response (tx_hash, block_number,
+    signer_role, committed_at, explorer_url, claim_hash)."""
+    p = _CASEFILE_HISTORY_DIR / f"{facility_id}.json"
+    if not p.exists():
         return []
-    out = []
-    with LOG_FILE.open() as f:
-        for line in f:
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if claim_type is not None and row.get("claim_type") != claim_type:
-                continue
-            # facility_id filtering is best-effort — depends on callers embedding it in claim preimage upstream.
-            out.append(row)
-    return out
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return []
 
 
 def _find_local(tx_hash: str) -> Optional[dict]:

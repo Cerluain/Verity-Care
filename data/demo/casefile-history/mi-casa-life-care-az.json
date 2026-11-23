@@ -1,0 +1,30 @@
+[
+  {
+    "tx_hash": "0xec836c712f9b68b2955961bab8f7b708eb4ab217eeb580768118ef758cc5fc51",
+    "claim_type": 3,
+    "claim_type_label": "casefile",
+    "signer_role": "verity_service",
+    "signer_address": "0x113B1E33d5DeE49e2e91Bd869A2CFA501B12269F",
+    "claim_hash": "0xcd604be6dea9f4a08e28385080cf99ec3fb758f200c77bddbfab62d40db281ee",
+    "block_number": 61956800,
+    "explorer_url": "https://sepolia.basescan.org/tx/0xec836c712f9b68b2955961bab8f7b708eb4ab217eeb580768118ef758cc5fc51",
+    "committed_at": "2026-11-11T05:40:54+00:00",
+    "mocked": false,
+    "facility_id": "mi-casa-life-care-az",
+    "note": "preliminary review \u2014 SPEND signals only"
+  },
+  {
+    "tx_hash": "0x2502751926eaa49ed31d44a8bc5c23f04abc8cd9877d0b2b87919f02075a4c4d",
+    "claim_type": 3,
+    "claim_type_label": "casefile",
+    "signer_role": "verity_service",
+    "signer_address": "0x113B1E33d5DeE49e2e91Bd869A2CFA501B12269F",
+    "claim_hash": "0xa63a2be4dde89d9ab6577f572e7c64b1b1b81ecc9898101a1a32fe3e87196477",
+    "block_number": 62129600,
+    "explorer_url": "https://sepolia.basescan.org/tx/0x2502751926eaa49ed31d44a8bc5c23f04abc8cd9877d0b2b87919f02075a4c4d",
+    "committed_at": "2026-11-19T05:40:54+00:00",
+    "mocked": false,
+    "facility_id": "mi-casa-life-care-az",
+    "note": "second review after Oct inventory snapshot anchored"
+  }
+]

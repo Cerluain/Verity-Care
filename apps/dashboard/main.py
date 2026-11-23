@@ -207,6 +207,16 @@ def facility_page():
     return FileResponse(APP_DIR / "facility.html")
 
 
+@app.get("/chain/commits")
+def chain_commits(facility_id: str | None = None, claim_type: int | None = None, limit: int = 100):
+    """Proxy to onchain /commits. Powers the CASE FILE audit timeline."""
+    params = {"limit": limit}
+    if facility_id is not None: params["facility_id"] = facility_id
+    if claim_type is not None:  params["claim_type"] = claim_type
+    r = _http.get(f"{ONCHAIN_SERVICE_URL}/commits", params=params, timeout=10.0)
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/chain/health")
 def chain_health():
     try:
