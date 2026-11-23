@@ -27,6 +27,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from nacl.signing import SigningKey, VerifyKey
 
+import db  # Postgres index; no-ops when DATABASE_URL isn't set.
+
 load_dotenv()
 
 CHAIN = os.getenv("CHAIN", "mock")
@@ -145,8 +147,17 @@ class SignResponse(BaseModel):
 
 
 def _append_log(entry: dict) -> None:
+    """Append to local JSONL (disaster-recovery cache) AND the Postgres index.
+    DB write failures are logged but don't fail the request — the JSONL keeps truth."""
     with LOG_FILE.open("a") as f:
         f.write(json.dumps(entry) + "\n")
+    try:
+        if db.enabled():
+            db.insert_commit(entry)
+            if entry.get("claim_type") == 5 and entry.get("facility_id"):
+                db.insert_delivery(entry)
+    except Exception as e:
+        print(f"[onchain] db insert failed (continuing with JSONL): {e}")
 
 
 def _mock_tx_hash(claim_type: int, claim_hash: str) -> str:
@@ -416,6 +427,11 @@ def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
             if event and event.get("block_number"):
                 row["block_number"] = event["block_number"]
                 row["block_timestamp"] = event.get("block_timestamp")
+                try:
+                    db.update_block_number(tx, event["block_number"],
+                                           event.get("signer_role"), event.get("signer_address"))
+                except Exception:
+                    pass
 
     return {
         "claim_hash": claim_hash,
@@ -736,5 +752,38 @@ def list_deliveries(facility_id: Optional[str] = None, limit: int = 50):
                     row["signer_role"] = event["signer_role"]
                 if event.get("signer_address"):
                     row["signer_address"] = event["signer_address"]
+                try:
+                    db.update_block_number(tx, event["block_number"],
+                                           event.get("signer_role"), event.get("signer_address"))
+                except Exception:
+                    pass
     return rows
+
+
+@app.post("/admin/reset-demo")
+def reset_demo(scope: str = "all"):
+    """Wipe demo state. scope: 'deliveries' | 'commits' | 'all'.
+    This deletes the Postgres index AND rotates the JSONL log aside. Chain data
+    stays on Base Sepolia forever — we just stop surfacing it. Fresh uploads
+    recreate index rows and (if hashes change) new chain txs."""
+    counts = {}
+    try:
+        counts = db.reset(scope)
+    except Exception as e:
+        raise HTTPException(500, f"db reset failed: {e}")
+    rotated = False
+    if scope in ("commits", "all") and LOG_FILE.exists():
+        backup = LOG_FILE.with_suffix(LOG_FILE.suffix + f".{int(datetime.now().timestamp())}.bak")
+        LOG_FILE.rename(backup)
+        LOG_FILE.touch()
+        rotated = True
+    return {"ok": True, "scope": scope, "db_deleted": counts, "jsonl_rotated": rotated}
+
+
+@app.on_event("startup")
+def _startup():
+    try:
+        db.init()
+    except Exception as e:
+        print(f"[onchain] db.init failed; continuing in JSONL-only mode. reason: {e}")
 

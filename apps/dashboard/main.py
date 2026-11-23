@@ -129,6 +129,13 @@ async def sign(req: Request):
     return JSONResponse(r.json(), status_code=r.status_code)
 
 
+@app.post("/admin/reset-demo")
+def admin_reset(scope: str = "all"):
+    """Proxy the hard-reset button: wipes deliveries + commits in the DB index."""
+    r = _http.post(f"{ONCHAIN_SERVICE_URL}/admin/reset-demo", params={"scope": scope})
+    return JSONResponse(r.json(), status_code=r.status_code)
+
+
 @app.get("/chain/health")
 def chain_health():
     try:
