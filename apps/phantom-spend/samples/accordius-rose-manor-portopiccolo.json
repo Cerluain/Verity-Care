@@ -269,7 +269,7 @@
                 "source": "CMS NADAC (National Average Drug Acquisition Cost) 2026",
                 "url": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-ownership_overlap-accordius-rose-manor-portopiccolo",
@@ -384,7 +384,7 @@
                 "source": "ProPublica \u2014 'When Private Equity Takes Over a Nursing Home' (Nov 2020)",
                 "url": "https://www.propublica.org/article/when-private-equity-takes-over-a-nursing-home"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-volume_sanity-accordius-rose-manor-portopiccolo-L001",
@@ -402,7 +402,7 @@
                 "expected_max": 1338,
                 "ratio": 2.4,
                 "resident_days": 8918,
-                "census_source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+                "census_source": "MOCK PBJ (data/spend/pbj-mock.json) \u2014 replace with CMS PBJ resident-days from Dev B",
                 "assumptions": {
                     "share_of_residents": 0.15,
                     "units_per_user_per_day": 1
@@ -571,10 +571,10 @@
                 ]
             },
             "citation": {
-                "source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)",
+                "source": "Resident-days: MOCK PBJ (real CMS PBJ pending from Dev B)",
                 "url": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-spend_overall-accordius-rose-manor-portopiccolo",
@@ -590,7 +590,7 @@
                 "ownership_overlap": "red",
                 "volume_sanity": "red"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         }
     ]
 }

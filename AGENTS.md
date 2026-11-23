@@ -38,18 +38,18 @@ Every third-party API key / token / credential MUST have a matching `.env.exampl
 
 ## Owner map
 
-(fill in once teammates self-assign)
-
-- Saswata (SD17) — overall direction, backend/data, integration
-- TBD — frontend / dashboard
-- TBD — pitch deck / demo rehearsal
+- Saswata (SD17, Dev C) — dashboard shell, chain (`apps/onchain`, `contracts/`), Voice, Case file, pitch narration
+- Abi (Dev A) — SPEND (`apps/phantom-spend`), SPEND tab table + graph, pitch page, guardian + staff views (`apps/dashboard/{pitch,guardian,staff}.html`, `care.py`)
+- Leo (Dev B) — SHIFT / staffing (`apps/phantom-spend`'s mock PBJ is a stand-in until his service lands)
 
 ## Current status
 
-**LOCKED. Build phase starting.**
+**Updated Nov 22 evening — see "Direction update" at the top of `contexts/01-project-brief.md`.** In short: one site, three views (investigator `/`, guardian `/guardian`, staff `/staff`) plus a sourced pitch page `/pitch`; chain is in (Base Sepolia); staffing is in (Leo). The paragraph below is the original locked text, kept for history.
+
+**LOCKED. Build phase starting.** *(original)*
 
 Research complete, direction frozen. Read in order: `contexts/01-project-brief.md` (pitch + scope + stack), `contexts/02-fraud-research-brief.md` (what the fraud actually is, why price-scraping is a strawman), `contexts/03-demo-plan.md` (hour-by-hour schedule + full pitch script).
 
-Headline: we build a 3-signal fraud detector fusing (1) reference-price delta, (2) ownership-graph overlap, (3) PBJ volume-vs-census sanity. Single HTML dashboard + FastAPI + static JSON. No chain. No ZK. No Vapi in v1.
+Headline (original): we build a 3-signal fraud detector fusing (1) reference-price delta, (2) ownership-graph overlap, (3) PBJ volume-vs-census sanity. Single HTML dashboard + FastAPI + static JSON. ~~No chain.~~ (reversed: chain in) No ZK. No Vapi in v1.
 
 Target buyer: state Medicaid Fraud Control Units.

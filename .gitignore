@@ -43,3 +43,6 @@ apps/onchain/data/commit-log.jsonl
 .vscode/
 *.swp
 Thumbs.db
+
+# Guardian live captures (photos) — never commit
+data/care/runtime/

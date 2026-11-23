@@ -47,6 +47,18 @@ USAGE = {
     "acetaminophen-325": (0.50, 4),
 }
 
+# Mock PBJ (Payroll-Based Journal) staffing: hours per resident day by role.
+# MOCK until Dev B (Leo) delivers real CMS PBJ numbers; replace data/spend/pbj-mock.json.
+# National averages are roughly RN 0.65 / LPN 0.85 / CNA 2.3 HPRD.
+PBJ_HPRD = {
+    "buffalo-center-centers-health":     (0.38, 0.70, 1.95),  # understaffed (per NY AG: neglect alongside diversion)
+    "accordius-rose-manor-portopiccolo": (0.45, 0.80, 2.05),
+    "mi-casa-life-care-az":              (0.42, 0.75, 1.90),  # therapy billed, thin floor staff
+    "crook-county-wy-rural":             (0.70, 0.90, 2.40),
+    "terraces-phoenix-humangood":        (0.95, 0.85, 2.60),
+    "haven-health-green-valley":         (0.80, 0.90, 2.45),
+}
+
 # Neutral wholesaler used by facilities with no related-party supplier.
 WHOLESALER = "national-wholesaler"
 
@@ -281,18 +293,28 @@ def main() -> None:
 
     assert set(FACILITIES) == set(facilities), "knob ids must match data/facilities.json"
 
-    census, line_items = {}, {}
+    census, line_items, pbj = {}, {}, {}
     for fid, cfg in FACILITIES.items():
         beds = facilities[fid]["beds"]
         residents = round(beds * cfg["occupancy"])
         rdays = residents * QUARTER_DAYS
+        rn, lpn, cna = PBJ_HPRD[fid]
+        pbj[fid] = {
+            "ccn": facilities[fid]["ccn"],
+            "quarter": "2026-Q3",
+            "days_reported": QUARTER_DAYS,
+            "avg_daily_census": residents,
+            "resident_days_quarter": rdays,
+            "hprd": {"rn": rn, "lpn": lpn, "cna": cna, "total": round(rn + lpn + cna, 2)},
+            "nurse_hours_quarter": {"rn": round(rn * rdays), "lpn": round(lpn * rdays), "cna": round(cna * rdays)},
+        }
         census[fid] = {
             "beds": beds,
             "occupancy": cfg["occupancy"],
             "avg_residents": residents,
             "resident_days_quarter": rdays,
             "quarter": "2026-Q3",
-            "source": "placeholder: beds × occupancy × 91 days (swap for PBJ resident-days from Dev B)",
+            "source": "MOCK PBJ (data/spend/pbj-mock.json) — replace with CMS PBJ resident-days from Dev B",
             "data_provenance": "demo_grounded",
         }
         rows = []
@@ -322,9 +344,15 @@ def main() -> None:
     (SPEND / "census.json").write_text(json.dumps({"_meta": {**meta, "usage_assumptions": {
         k: {"share_of_residents": s, "units_per_user_per_day": d} for k, (s, d) in USAGE.items()}},
         "facilities": census}, indent=2) + "\n")
+    (SPEND / "pbj-mock.json").write_text(json.dumps({"_meta": {
+        "data_provenance": "demo_grounded", "mock": True,
+        "note": "MOCK Payroll-Based Journal summary for the demo. Same shape Dev B should deliver; "
+                "drop real CMS PBJ numbers in here and re-run build_demo_data.py.",
+        "real_source": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"},
+        "facilities": pbj}, indent=2) + "\n")
     (SPEND / "line-items.json").write_text(json.dumps({"_meta": meta, "facilities": line_items}, indent=2) + "\n")
     (SPEND / "ownership-graphs.json").write_text(json.dumps({"_meta": meta, "facilities": GRAPHS}, indent=2) + "\n")
-    print("wrote census.json, line-items.json, ownership-graphs.json")
+    print("wrote pbj-mock.json, census.json, line-items.json, ownership-graphs.json")
 
 
 if __name__ == "__main__":

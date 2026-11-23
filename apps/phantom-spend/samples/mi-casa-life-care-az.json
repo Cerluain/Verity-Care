@@ -269,7 +269,7 @@
                 "source": "CMS NADAC (National Average Drug Acquisition Cost) 2026",
                 "url": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-ownership_overlap-mi-casa-life-care-az",
@@ -366,7 +366,7 @@
                 "source": "DOJ 2016 settlement \u2014 Life Care Centers pays $145M for medically unnecessary rehab therapy",
                 "url": "https://www.justice.gov/opa/pr/life-care-centers-america-inc-agrees-pay-145-million-resolve-false-claims-act-allegations"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-volume_sanity-mi-casa-life-care-az-L001",
@@ -384,7 +384,7 @@
                 "expected_max": 846,
                 "ratio": 1.0,
                 "resident_days": 14105,
-                "census_source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+                "census_source": "MOCK PBJ (data/spend/pbj-mock.json) \u2014 replace with CMS PBJ resident-days from Dev B",
                 "assumptions": {
                     "share_of_residents": 0.06,
                     "units_per_user_per_day": 1
@@ -553,10 +553,10 @@
                 ]
             },
             "citation": {
-                "source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)",
+                "source": "Resident-days: MOCK PBJ (real CMS PBJ pending from Dev B)",
                 "url": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-spend_overall-mi-casa-life-care-az",
@@ -572,7 +572,7 @@
                 "ownership_overlap": "green",
                 "volume_sanity": "green"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         }
     ]
 }

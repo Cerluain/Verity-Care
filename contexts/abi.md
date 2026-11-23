@@ -29,12 +29,39 @@ Role: **Dev A — Phantom Spend** (procurement fraud pillar), **backend-only**. 
 - **Tests** (`test_scoring.py`): expected colours for all 6, every card validated against `packages/schemas/signal-card.schema.json`, graph drawable, 12 table rows, 404 on unknown id.
 - **Tested locally by Abi** via curl: output matches the table above.
 
+### Round 2 (Nov 22, late): dashboard + guardian + pitch — agreed with Saswata
+Direction is now in `AGENTS.md` and the top of `contexts/01-project-brief.md`. What I built:
+
+- **Colour bug fixed** in `apps/dashboard/index.html`: SPEND's contribution to the facility colour now comes from the `spend_overall` card. `crook-county-wy-rural` shows **YELLOW**. (Saswata: this was your roll-up code, edited with your OK via Abi.)
+- **Spending tab** (renamed from SPEND): verdict banner, the 4 cards (your chain buttons untouched), **ownership graph** (vis-network, owners on top, related-party path in red, hover tooltips; `static/spend-extras.js`) and the **invoice table** (12 rows, paid vs fair price, markup + qty-vs-need badges, "same owner" tags).
+- **Tabs now:** Spending · Staffing · Guardian reports · Voice · Case file.
+- **Staffing tab:** shows **MOCK PBJ** (hours per resident per day by role) and any `/shift` signals once Leo's service is up.
+- **Mock PBJ for all 6 facilities**: `data/spend/pbj-mock.json`, served at `GET :8003/pbj/{id}` and proxied by the dashboard at `/pbj/{id}`. `census.json` resident-days come from it. **Leo: drop real numbers into that file (same shape) and re-run `scripts/build_demo_data.py`.**
+- **Pitch page `/pitch`**: 6 full-screen slides from `04-spend-evidence.md` (every number cited), space/↓ to advance, "Open the product →". Linked from a **▶ Pitch** button in the top corner of every view.
+- **Guardian view `/guardian`**: synthetic resident Rosa D. at Mi Casa, live timeline (polls every 3 s) of meds, meals, therapy, activities, vitals. Each item shows who verified it, the photo, its fingerprint and the tx. "This didn't happen" sends a dispute.
+- **Staff check-in `/staff`** (phone): pick a task → phone camera → photo SHA-256 + metadata hashed → `/commit` claim type 1 (facility signer). Photo stays off-chain in `data/care/runtime/` (gitignored). Works over plain http on venue WiFi (uses the native camera input, not getUserMedia).
+- **Guardian reports tab**: family disputes + billed therapy with no check-in, per facility.
+- **Backend:** `apps/dashboard/care.py` (router in `main.py`) + seed `data/care/residents.json`. `CARE_DEMO_TIME` (default `12:30`) fixes "now" so the demo looks like lunchtime even at 11 PM. `POST /care/reset` clears live check-ins before a run.
+- **Tested end to end** with the onchain service in mock mode: check-in → mock tx (facility signer) → guardian flips to verified → dispute → appears in Guardian reports. 18 SPEND tests pass.
+
+### Round 3 (Nov 22, night): guardian + staff on SQLite, Proof-of-Service wiring, new pitch
+- **SQLite** (`apps/dashboard/care_db.py`, file `data/care/runtime/care.db`, gitignored, auto-seeded): 5 synthetic residents at Mi Casa (Rosa, Walter, Mae, Harold, Gloria), guardians, 6 staff (RN-1187, LPN-0412, CNA-2231, CNA-2240, PT-0907, OT-0310), assignments, per-resident care plans, history. `POST /care/reset` re-seeds. Replaces `data/care/residents.json`.
+- **Staff check-in now uses Saswata's Proof-of-Service pipeline**: `care.py` forwards the photo to onchain `POST /delivery` (IPFS + staff wallet, claim type 5) and stores tx/CIDs against the care-plan item. Fallback: `/commit` claim type 1, then "recorded, not anchored". ⚠️ IPFS is public, so for real use photos must be encrypted before pinning. Demo: props/teammates only.
+- **Staff app** `/staff`: sign in with staff ID → your assigned residents (due counts) → your role's tasks for that resident (allergy banner) → photo → confirm. Wrong staff for a resident → 403.
+- **Guardian** `/guardian`: full width, 3 columns. "{Name}'s full history" dropdown (stay length, meds, allergies, diet, doctor, care team, therapy billed vs verified, history timeline). Day filter (last 7 days; before go-live = "No records before Verity Care go-live"). ⏳ anchoring → ✓ on-chain status. "verify proof" re-fetches IPFS metadata and recomputes the hash in the browser (Saswata's TODO 2).
+- **Dispute routing** (agreed): facility always → State Long-Term Care Ombudsman (medication = safety, immediately; others if not fixed in 24 h) → state investigator **only if billed or 2+ disputes in 7 days**. Guardian sees the route; investigator "Guardian reports" shows only referred ones.
+- **Navigation**: floating icon panel bottom-left on every page (🕵️ 👪 🩺 ▶), a slim bar on phones. Top bars removed.
+- **Pitch** `/pitch`: one scrolling page; a single diagram on the right builds as you scroll (Medicaid → home → supplier → same owner → profit loop → cost report → rate ↑ → real case → investigator → Verity's 3 checks → family), all numbers cited.
+- **Not merged yet:** Saswata's `8a0711d` (Proof-of-Service backend) touches `index.html`, dashboard `main.py`, this file and the brief. To be merged at commit time. His Voice → "proof of service" tab rename wins.
+
 ### What's next
-- [ ] Saswata: build the SPEND tab against the endpoint/samples; use `spend_overall` for the roll-up
-- [ ] Leo: send PBJ resident-days → I swap them into `census.json` and re-check colours
-- [ ] Optional: Cost Plus Drugs prices as a second reference column
-- [ ] P1: anchor card hashes via `packages/onchain-client`; cost-report CSV upload endpoint
-- [ ] Possible wording tweak: ownership headline says "3 hops", which could read "shares an owner"
+- [x] ~~Saswata: build the SPEND tab; use `spend_overall` for the roll-up~~ → done by Abi
+- [x] ~~Server-side anchoring of SPEND cards~~ → **not doing it**: the dashboard's "Commit on-chain" button is enough (avoids double receipts). Saswata's TODO 1/2 below are closed by this decision.
+- [ ] Saswata: confirm claim type 1 (facility signer) is right for care check-ins, or add a dedicated type
+- [ ] Leo: real PBJ → `data/spend/pbj-mock.json`
+- [ ] Together: wording pass on the Spending tab ("rephrasing")
+- [ ] Rehearse the demo arc (in `01-project-brief.md`) on the real venue WiFi with a phone on `/staff`
+- [ ] Optional: Cost Plus Drugs prices; "3 hops" → "shares an owner"
 
 ---
 

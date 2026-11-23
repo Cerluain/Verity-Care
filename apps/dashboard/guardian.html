@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verity Care — Guardian View</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="/static/nav.js" defer></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .cat-medication { --c: #7c3aed; --bg: #f5f3ff; }
+    .cat-meal       { --c: #d97706; --bg: #fffbeb; }
+    .cat-therapy    { --c: #0284c7; --bg: #f0f9ff; }
+    .cat-vitals     { --c: #e11d48; --bg: #fff1f2; }
+    .cat-activity   { --c: #059669; --bg: #ecfdf5; }
+    .cat-icon { background: var(--bg); color: var(--c); }
+    @keyframes flash { 0% { box-shadow: 0 0 0 4px #86efac } 100% { box-shadow: 0 0 0 0 transparent } }
+    .flash { animation: flash 2.5s ease-out; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-white to-rose-50 text-slate-900 min-h-screen">
+<div x-data="guardian()" x-init="init()" x-cloak class="pl-24 pr-6 lg:pr-10 py-6">
+
+  <template x-if="tl">
+    <div>
+      <!-- Top bar -->
+      <div class="flex flex-wrap items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg">👪</div>
+        <div>
+          <div class="font-semibold leading-tight">Verity Care · Family</div>
+          <div class="text-xs text-slate-500">Signed in as <span x-text="tl.resident.guardian.name + ' (synthetic), ' + tl.resident.guardian.relation"></span></div>
+        </div>
+        <div class="ml-auto flex items-center gap-2 text-xs">
+          <span class="text-slate-500">Demo: viewing</span>
+          <select x-model="residentId" @change="switchResident()" class="border border-slate-300 rounded-lg px-2 py-1 bg-white">
+            <template x-for="r in residents"><option :value="r.id" x-text="r.name" :selected="r.id === residentId"></option></template>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <!-- LEFT: profile -->
+        <aside class="xl:col-span-3 space-y-4">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 to-rose-400 text-white flex items-center justify-center text-2xl font-semibold" x-text="tl.resident.name[0]"></div>
+              <div>
+                <div class="text-xl font-semibold" x-text="tl.resident.name"></div>
+                <div class="text-xs text-slate-500">synthetic resident · age <span x-text="tl.resident.age"></span></div>
+              </div>
+            </div>
+            <div class="mt-3 text-sm text-slate-600" x-text="tl.resident.facility_name + ' · Room ' + tl.resident.room"></div>
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              <template x-for="c in tl.resident.profile.conditions"><span class="text-xs bg-indigo-50 text-indigo-700 rounded-full px-2 py-0.5" x-text="c"></span></template>
+            </div>
+            <button @click="showHistory = !showHistory; loadProfile()"
+                    class="mt-4 w-full flex items-center justify-between bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-2.5 text-sm font-semibold">
+              <span x-text="tl.resident.name.split(' ')[0] + '\u2019s full history'"></span>
+              <span x-text="showHistory ? '▲' : '▼'"></span>
+            </button>
+          </div>
+
+          <!-- History dropdown -->
+          <template x-if="showHistory && profile">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4 text-sm">
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">In care since</div><div class="font-semibold" x-text="fmtDate(profile.admitted)"></div></div>
+                <div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Length of stay</div><div class="font-semibold" x-text="stay(profile.days_in_care)"></div></div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Medications</div>
+                <template x-for="m in profile.profile.meds"><div class="flex justify-between py-0.5"><span x-text="m.name + ' ' + m.dose"></span><span class="text-slate-500" x-text="m.when"></span></div></template>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Allergies</div>
+                  <div x-text="profile.profile.allergies.length ? profile.profile.allergies.join(', ') : 'None known'"></div></div>
+                <div><div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Diet</div><div x-text="profile.profile.diet"></div></div>
+              </div>
+              <div><div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Doctor</div><div x-text="profile.profile.physician"></div></div>
+              <div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Care team</div>
+                <template x-for="s in profile.profile.care_team"><div class="flex justify-between py-0.5"><span x-text="s.name"></span><span class="text-slate-500 mono text-xs" x-text="s.role + ' · ' + s.id"></span></div></template>
+              </div>
+              <template x-if="Object.keys(profile.profile.billing).length">
+                <div>
+                  <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Therapy: billed vs. photo-verified (last 30 days)</div>
+                  <template x-for="k in ['pt','ot']">
+                    <template x-if="profile.profile.billing[k + '_billed']">
+                      <div class="py-1">
+                        <div class="flex justify-between text-xs"><span x-text="k === 'pt' ? 'Physical therapy' : 'Occupational therapy'"></span>
+                          <span><b x-text="profile.profile.billing[k + '_verified']"></b> of <span x-text="profile.profile.billing[k + '_billed']"></span> sessions verified</span></div>
+                        <div class="h-2 bg-red-100 rounded-full mt-1"><div class="h-2 bg-green-500 rounded-full"
+                             :style="'width:' + (100 * profile.profile.billing[k + '_verified'] / profile.profile.billing[k + '_billed']) + '%'"></div></div>
+                      </div>
+                    </template>
+                  </template>
+                  <div class="text-[11px] text-slate-400">Synthetic figures for the demo.</div>
+                </div>
+              </template>
+              <div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">History</div>
+                <ol class="border-l-2 border-indigo-100 ml-1 space-y-2">
+                  <template x-for="h in profile.history">
+                    <li class="ml-3">
+                      <div class="text-xs text-slate-500" x-text="fmtDate(h.day) + ' · ' + h.kind.replace('_', ' ')"></div>
+                      <div class="font-medium" x-text="h.title"></div>
+                      <template x-if="h.detail"><div class="text-xs text-slate-600" x-text="h.detail"></div></template>
+                    </li>
+                  </template>
+                </ol>
+              </div>
+            </div>
+          </template>
+        </aside>
+
+        <!-- MIDDLE: timeline -->
+        <main class="xl:col-span-6">
+          <!-- Day filter -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-2">
+            <template x-for="d in days" :key="d.day">
+              <button @click="pickDay(d.day)" class="shrink-0 rounded-xl px-3 py-2 text-sm border transition"
+                      :class="d.day === day ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white border-slate-200 hover:border-indigo-300'">
+                <div class="text-xs opacity-80" x-text="d.day === today ? 'Today' : weekday(d.day)"></div>
+                <div class="font-semibold" x-text="shortDate(d.day)"></div>
+              </button>
+            </template>
+            <div class="ml-auto shrink-0 text-xs text-slate-500 flex items-center gap-1.5 pl-3">
+              <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> live · now <span class="mono" x-text="tl.demo_time"></span>
+            </div>
+          </div>
+
+          <template x-if="tl.before_go_live">
+            <div class="mt-4 bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+              <div class="text-4xl">🗓️</div>
+              <div class="font-semibold mt-2">No records before Verity Care go-live</div>
+              <div class="text-sm text-slate-500">Photo-verified care records start on <span x-text="fmtDate(tl.go_live)"></span>.</div>
+            </div>
+          </template>
+
+          <template x-if="!tl.before_go_live">
+            <div>
+              <div class="grid grid-cols-4 gap-3 my-4">
+                <div class="rounded-2xl bg-green-50 border border-green-100 p-3"><div class="text-2xl font-bold text-green-700" x-text="tl.counts.verified"></div><div class="text-xs text-green-800">verified</div></div>
+                <div class="rounded-2xl bg-amber-50 border border-amber-100 p-3"><div class="text-2xl font-bold text-amber-700" x-text="tl.counts.not_verified"></div><div class="text-xs text-amber-800">no proof yet</div></div>
+                <div class="rounded-2xl bg-red-50 border border-red-100 p-3"><div class="text-2xl font-bold text-red-700" x-text="tl.counts.disputed"></div><div class="text-xs text-red-800">disputed</div></div>
+                <div class="rounded-2xl bg-white border border-slate-200 p-3"><div class="text-2xl font-bold text-slate-700" x-text="tl.counts.upcoming"></div><div class="text-xs text-slate-600">upcoming</div></div>
+              </div>
+
+              <ol class="space-y-3">
+                <template x-for="i in tl.items" :key="i.id">
+                  <li class="bg-white rounded-2xl border shadow-sm p-4 flex gap-4"
+                      :class="[flashIds.includes(i.id) ? 'flash' : '', {verified:'border-green-200', not_verified:'border-amber-200', disputed:'border-red-300', upcoming:'border-slate-200 opacity-70'}[i.status]]">
+                    <div class="flex flex-col items-center gap-1 w-14 shrink-0">
+                      <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl cat-icon" :class="'cat-' + i.category" x-text="icon(i.category)"></div>
+                      <div class="mono text-xs text-slate-500" x-text="i.time"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-semibold" x-text="i.title"></span>
+                        <span class="text-xs rounded-full px-2 py-0.5 font-medium"
+                              :class="{verified:'bg-green-100 text-green-800', not_verified:'bg-amber-100 text-amber-800', disputed:'bg-red-100 text-red-800', upcoming:'bg-slate-100 text-slate-600'}[i.status]"
+                              x-text="{verified:'✓ verified', not_verified:'no proof yet', disputed:'disputed', upcoming:'upcoming'}[i.status]"></span>
+                        <template x-if="i.billed"><span class="text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5" x-text="'billed · ' + i.billed"></span></template>
+                      </div>
+                      <div class="text-sm text-slate-600" x-text="i.detail"></div>
+
+                      <template x-if="i.event">
+                        <div class="mt-2 flex gap-3">
+                          <template x-if="i.event.photo_url && !i.event.seeded">
+                            <img :src="i.event.photo_url" class="w-28 h-28 object-cover rounded-xl border border-slate-200" alt="check-in photo">
+                          </template>
+                          <div class="text-xs text-slate-600 space-y-1 min-w-0">
+                            <div>Verified by <b x-text="i.event.staff ? i.event.staff.name + ' (' + i.event.staff.role + ')' : i.event.staff_id"></b> at <span x-text="fmtTime(i.event.captured_at)"></span></div>
+                            <template x-if="i.event.note"><div class="italic" x-text="'“' + i.event.note + '”'"></div></template>
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <template x-if="chainState(i.event) === 'confirmed'"><span class="bg-green-100 text-green-800 rounded px-1.5 py-0.5">✓ on-chain<span x-text="i.event._block ? ' · block ' + i.event._block : ''"></span></span></template>
+                              <template x-if="chainState(i.event) === 'pending'"><span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5 animate-pulse">⏳ anchoring…</span></template>
+                              <template x-if="chainState(i.event) === 'mock'"><span class="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">on-chain (mock)</span></template>
+                              <template x-if="chainState(i.event) === 'none'"><span class="bg-amber-100 text-amber-800 rounded px-1.5 py-0.5">recorded, not anchored</span></template>
+                              <template x-if="i.event.tx_hash"><span class="mono text-slate-400" x-text="short(i.event.tx_hash)"></span></template>
+                              <template x-if="i.event.explorer_url"><a :href="i.event.explorer_url" target="_blank" class="text-blue-600 underline">Basescan ↗</a></template>
+                              <template x-if="i.event.image_url"><a :href="i.event.image_url" target="_blank" class="text-blue-600 underline">IPFS photo ↗</a></template>
+                              <template x-if="i.event.metadata_url"><button @click="verifyHash(i.event)" class="border border-slate-300 rounded px-1.5 py-0.5 hover:bg-slate-50">verify proof</button></template>
+                            </div>
+                            <template x-if="i.event._verify"><div :class="i.event._verify.ok ? 'text-green-700' : 'text-red-700'" x-text="i.event._verify.msg"></div></template>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template x-if="i.status === 'not_verified'">
+                        <div class="mt-2 text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1 inline-block">Scheduled <span x-text="i.time"></span>, no staff photo check-in.<template x-if="i.billed"><b> This is billed.</b></template></div>
+                      </template>
+
+                      <template x-if="i.dispute">
+                        <div class="mt-2 rounded-xl bg-red-50 border border-red-100 p-3 text-xs">
+                          <div class="text-red-800 font-medium">You reported: “<span x-text="i.dispute.reason"></span>”</div>
+                          <ol class="mt-2 space-y-1">
+                            <template x-for="s in i.dispute.route">
+                              <li class="flex items-start gap-2">
+                                <span x-text="s.done ? '●' : '○'" :class="s.done ? 'text-red-600' : 'text-slate-400'"></span>
+                                <span :class="s.done ? 'text-slate-800' : 'text-slate-500'" x-text="s.label"></span>
+                              </li>
+                            </template>
+                          </ol>
+                        </div>
+                      </template>
+                    </div>
+                    <template x-if="day === today && (i.status === 'verified' || i.status === 'not_verified')">
+                      <button @click="dispute(i)" class="self-start text-xs border border-slate-300 rounded-lg px-2 py-1 hover:bg-red-50 hover:border-red-300 whitespace-nowrap">This didn’t happen</button>
+                    </template>
+                  </li>
+                </template>
+              </ol>
+            </div>
+          </template>
+        </main>
+
+        <!-- RIGHT: at a glance -->
+        <aside class="xl:col-span-3 space-y-4">
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            <div class="font-semibold mb-3">Today at a glance</div>
+            <template x-for="g in glance()">
+              <div class="flex items-center gap-3 py-1.5">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center cat-icon" :class="'cat-' + g.cat" x-text="icon(g.cat)"></div>
+                <div class="flex-1 text-sm" x-text="g.label"></div>
+                <div class="text-sm font-semibold" x-text="g.done + '/' + g.total"></div>
+              </div>
+            </template>
+          </div>
+          <template x-if="staff">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+              <div class="font-semibold">Staffing at this home</div>
+              <div class="text-3xl font-bold mt-2" :class="staff.hprd.total < 3.48 ? 'text-amber-600' : 'text-green-600'" x-text="staff.hprd.total"></div>
+              <div class="text-xs text-slate-500">nurse hours per resident per day · CMS target 3.48 · mock PBJ</div>
+            </div>
+          </template>
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 text-xs text-slate-600 space-y-2">
+            <div class="font-semibold text-sm text-slate-800">Where a report goes</div>
+            <div><b>1. The facility</b>: the Director of Nursing must respond.</div>
+            <div><b>2. State Long-Term Care Ombudsman</b>: the official resident advocate. Safety issues (medication) go straight here; others if not fixed in 24 h.</div>
+            <div><b>3. State investigator</b>: only if the service was <b>billed</b>, or the family reports repeatedly.</div>
+          </div>
+          <div class="text-[11px] text-slate-400">Synthetic resident. Photos are visible to the family; a fingerprint of each check-in is anchored on-chain so it can’t be edited later.</div>
+        </aside>
+      </div>
+    </div>
+  </template>
+  <template x-if="!tl"><div class="text-slate-400">Loading…</div></template>
+</div>
+
+<script>
+function guardian() {
+  return {
+    residentId: new URLSearchParams(location.search).get('resident') || 'res-rosa',
+    residents: [], days: [], day: null, today: null, tl: null, profile: null, staff: null,
+    showHistory: false, flashIds: [], _seen: null, _blocks: {},
+    async init() {
+      const [rs, ds] = await Promise.all([fetch('/care/residents').then(r => r.json()), fetch('/care/days').then(r => r.json())]);
+      this.residents = rs.residents; this.days = ds.days; this.today = ds.today; this.day = ds.today;
+      await this.refresh();
+      try { this.staff = await fetch('/pbj/mi-casa-life-care-az').then(r => r.ok ? r.json() : null); } catch (_) {}
+      setInterval(() => this.refresh(), 3000);
+    },
+    async switchResident() { this.profile = null; this.showHistory = false; this._seen = null; history.replaceState(null, '', '?resident=' + this.residentId); await this.refresh(); },
+    async pickDay(d) { this.day = d; this._seen = null; await this.refresh(); },
+    async loadProfile() { if (!this.profile) this.profile = await fetch('/care/residents/' + this.residentId).then(r => r.json()); },
+    async refresh() {
+      const d = await fetch(`/care/timeline/${this.residentId}?day=${this.day}`).then(r => r.json());
+      const sig = i => i.status + (i.event?.id || '');
+      this.flashIds = this._seen ? d.items.filter(i => this._seen[i.id] !== sig(i)).map(i => i.id) : [];
+      this._seen = Object.fromEntries(d.items.map(i => [i.id, sig(i)]));
+      // Keep verify results + block numbers across polls.
+      const old = Object.fromEntries((this.tl?.items || []).filter(i => i.event).map(i => [i.event.id, i.event]));
+      for (const i of d.items) if (i.event && old[i.event.id]) { i.event._verify = old[i.event.id]._verify; }
+      for (const i of d.items) if (i.event) i.event._block = this._blocks[i.event.tx_hash];
+      this.tl = d;
+      this.pollChain();
+    },
+    chainState(e) {
+      if (!e.tx_hash) return 'none';
+      if (e.mocked || e.seeded) return 'mock';
+      return this._blocks[e.tx_hash] ? 'confirmed' : 'pending';
+    },
+    async pollChain() {
+      for (const i of this.tl.items) {
+        const e = i.event;
+        if (!e || !e.tx_hash || e.mocked || e.seeded || this._blocks[e.tx_hash]) continue;
+        try {
+          const r = await fetch('/chain/' + e.tx_hash).then(r => r.json());
+          if (r.verified && r.block_number) { this._blocks[e.tx_hash] = r.block_number; e._block = r.block_number; }
+        } catch (_) {}
+      }
+    },
+    async verifyHash(e) {
+      // Re-fetch the metadata from IPFS, recompute sha256(canonical JSON), compare with the on-chain claim hash.
+      try {
+        const meta = await fetch(e.metadata_url).then(r => r.json());
+        const buf = new TextEncoder().encode(JSON.stringify(sortedCopy(meta)));
+        const h = '0x' + Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))).map(b => b.toString(16).padStart(2, '0')).join('');
+        e._verify = h === e.claim_hash ? { ok: true, msg: '✓ IPFS record matches the on-chain hash' }
+                                       : { ok: false, msg: '✗ Mismatch: the record was changed' };
+      } catch (err) { e._verify = { ok: false, msg: 'Could not fetch the IPFS record (' + err.message + ')' }; }
+    },
+    async dispute(i) {
+      const reason = prompt('What happened? This goes to the facility first.', 'Mom says this never happened');
+      if (reason === null) return;
+      await fetch('/care/disputes', { method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({ resident_id: this.residentId, plan_item_id: i.id, reason, day: this.day }) });
+      this.refresh();
+    },
+    glance() {
+      const cats = [['medication', 'Medications'], ['meal', 'Meals'], ['therapy', 'Therapy'], ['vitals', 'Vitals'], ['activity', 'Activities']];
+      const its = this.tl?.items || [];
+      return cats.map(([c, l]) => ({ cat: c, label: l, total: its.filter(i => i.category === c).length,
+                                     done: its.filter(i => i.category === c && i.status === 'verified').length }))
+                 .filter(g => g.total);
+    },
+    icon(c) { return {medication:'💊', meal:'🍽️', therapy:'🦵', activity:'🎵', vitals:'❤️'}[c] || '•'; },
+    short(h) { return h && h.length > 16 ? h.slice(0, 10) + '…' + h.slice(-6) : (h || ''); },
+    fmtTime(t) { return /^\d\d:\d\d$/.test(t) ? t : new Date(t).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); },
+    fmtDate(d) { return new Date(d + 'T12:00').toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}); },
+    shortDate(d) { return new Date(d + 'T12:00').toLocaleDateString([], {month:'short', day:'numeric'}); },
+    weekday(d) { return new Date(d + 'T12:00').toLocaleDateString([], {weekday:'short'}); },
+    stay(n) { const y = Math.floor(n / 365), m = Math.floor((n % 365) / 30); return (y ? y + ' yr ' : '') + (m ? m + ' mo' : (y ? '' : n + ' days')); },
+  };
+}
+function sortedCopy(v) {
+  if (Array.isArray(v)) return v.map(sortedCopy);
+  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v).sort()) o[k] = sortedCopy(v[k]); return o; }
+  return v;
+}
+</script>
+</body>
+</html>

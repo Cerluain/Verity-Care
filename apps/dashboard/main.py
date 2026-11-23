@@ -39,6 +39,26 @@ SPEND_SAMPLES_DIR = REPO_ROOT / "apps" / "phantom-spend" / "samples"
 app = FastAPI(title="Verity Care — Investigator Dashboard")
 _http = httpx.Client(timeout=15.0)
 
+# Guardian timeline + live staff photo check-in (Dev A) — see care.py
+from care import router as care_router  # noqa: E402
+app.include_router(care_router)
+
+
+# Extra pages on the same site (Dev A): pitch story, guardian view, staff check-in.
+@app.get("/pitch")
+def pitch_page():
+    return FileResponse(APP_DIR / "pitch.html")
+
+
+@app.get("/guardian")
+def guardian_page():
+    return FileResponse(APP_DIR / "guardian.html")
+
+
+@app.get("/staff")
+def staff_page():
+    return FileResponse(APP_DIR / "staff.html")
+
 
 @app.get("/")
 def index():
@@ -65,6 +85,22 @@ def spend(facility_id: str):
     if sample.exists():
         return JSONResponse(json.loads(sample.read_text()))
     raise HTTPException(404, f"no SPEND data for {facility_id}")
+
+
+@app.get("/pbj/{facility_id}")
+def pbj(facility_id: str):
+    """MOCK PBJ staffing summary from phantom-spend until Leo's phantom-shift is live."""
+    try:
+        r = _http.get(f"{SPEND_API_BASE}/pbj/{facility_id}")
+        if r.status_code == 200:
+            return JSONResponse(r.json())
+    except Exception:
+        pass
+    mock = REPO_ROOT / "data" / "spend" / "pbj-mock.json"
+    doc = json.loads(mock.read_text()) if mock.exists() else {"facilities": {}}
+    if facility_id not in doc["facilities"]:
+        raise HTTPException(404, f"no PBJ data for {facility_id}")
+    return JSONResponse({**doc["facilities"][facility_id], "_meta": doc.get("_meta", {})})
 
 
 @app.get("/shift/{facility_id}")

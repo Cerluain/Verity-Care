@@ -269,7 +269,7 @@
                 "source": "CMS NADAC (National Average Drug Acquisition Cost) 2026",
                 "url": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-ownership_overlap-haven-health-green-valley",
@@ -363,7 +363,7 @@
                 "source": "CMS Nursing Home Compare \u2014 Provider Information dataset (Oct 2026)",
                 "url": "https://www.medicare.gov/care-compare/details/nursing-home/035073"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-volume_sanity-haven-health-green-valley-L001",
@@ -381,7 +381,7 @@
                 "expected_max": 43,
                 "ratio": 0.9,
                 "resident_days": 9009,
-                "census_source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+                "census_source": "MOCK PBJ (data/spend/pbj-mock.json) \u2014 replace with CMS PBJ resident-days from Dev B",
                 "assumptions": {
                     "share_of_residents": 0.12,
                     "units_per_user_per_day": 0.04
@@ -550,10 +550,10 @@
                 ]
             },
             "citation": {
-                "source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)",
+                "source": "Resident-days: MOCK PBJ (real CMS PBJ pending from Dev B)",
                 "url": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         },
         {
             "signal_id": "spend-spend_overall-haven-health-green-valley",
@@ -569,7 +569,7 @@
                 "ownership_overlap": "green",
                 "volume_sanity": "green"
             },
-            "computed_at": "2026-11-23T01:35:44Z"
+            "computed_at": "2026-11-23T02:48:12Z"
         }
     ]
 }

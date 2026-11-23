@@ -76,3 +76,9 @@ def test_spend_overall_rule():
     assert scoring.spend_overall({"a": "red", "b": "red", "c": "red"}) == "red"
     assert scoring.spend_overall({"a": "red", "b": "green", "c": "green"}) == "yellow"
     assert scoring.spend_overall({"a": "green", "b": "green", "c": "green"}) == "green"
+
+
+def test_mock_pbj_for_every_facility():
+    for fid in EXPECTED:
+        r = client.get(f"/pbj/{fid}").json()
+        assert r["_meta"]["mock"] is True and r["resident_days_quarter"] > 0

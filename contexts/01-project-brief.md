@@ -1,6 +1,28 @@
 # Project Brief — VillageHacks '26 Lite
 
-**Status:** LOCKED. Research complete. Build phase starting.
+**Status:** LOCKED, then updated Nov 22 evening (see Direction update below).
+
+## ⚠️ Direction update (Nov 22, evening) — supersedes the "locked" text below where they conflict
+
+Agreed by Abi + Saswata. Older text is kept below for history.
+
+**Product = Verity Care, one website (`apps/dashboard`, :8000) with three views + a pitch page:**
+
+| Route | Who | What |
+|---|---|---|
+| `/pitch` | judges | Static story built from `contexts/04-spend-evidence.md` (every number sourced). The demo **starts here**, then "Open the product →". |
+| `/` | state investigator (MFCU) | Facility list + tabs: **Spending** (Dev A: 3 signals, ownership graph, invoice table), **Staffing** (Dev B: mock PBJ until Leo's SHIFT lands), **Guardian reports** (family disputes + billed-but-unverified care), Voice, Case file. Chain buttons per card (Dev C). |
+| `/guardian` | family member | Live daily timeline for their relative: meds, meals, therapy, activities, vitals. Each item is **photo-verified by staff** and anchored on-chain; the family can press "This didn't happen". |
+| `/staff` | facility staff (phone) | Pick a care task → take a **live photo** → photo SHA-256 + metadata hashed → `/commit` (claim type 1, facility signer). Photo stays off-chain. |
+
+**Demo arc:** pitch page → investigator: Buffalo Center (all 3 SPEND signals red, ownership graph) → Crook County stays yellow (rural check) → guardian view for a synthetic resident at Mi Casa → staff takes a live photo at lunch, the guardian timeline flips to verified in real time → guardian disputes the billed physical therapy → it shows up in the investigator's Guardian reports for Mi Casa.
+
+**Changes vs. the locked brief:** a chain IS used (Base Sepolia, 3 signers, see `HANDOFF.md`); staffing is in scope (Leo); guardian/consumer view added alongside the MFCU buyer. Facility colour roll-up takes SPEND's contribution from the `spend_overall` card. Correct headline stats are in `04-spend-evidence.md` (~$64B Medicaid, not $90B; $11.23B related-party, not "$12B Harvard").
+
+**Honest caveat for "no facility cooperation":** the investigator side needs none. The guardian timeline is what an honest facility opts into, and a facility that won't, or whose timeline doesn't match its billing, is itself a signal.
+
+---
+
 
 Read this file first, then `02-fraud-research-brief.md` (what the fraud actually is), then `03-demo-plan.md` (what we're building in 6h).
 

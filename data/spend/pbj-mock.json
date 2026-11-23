@@ -1,0 +1,118 @@
+{
+  "_meta": {
+    "data_provenance": "demo_grounded",
+    "mock": true,
+    "note": "MOCK Payroll-Based Journal summary for the demo. Same shape Dev B should deliver; drop real CMS PBJ numbers in here and re-run build_demo_data.py.",
+    "real_source": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
+  },
+  "facilities": {
+    "buffalo-center-centers-health": {
+      "ccn": "335638",
+      "quarter": "2026-Q3",
+      "days_reported": 91,
+      "avg_daily_census": 180,
+      "resident_days_quarter": 16380,
+      "hprd": {
+        "rn": 0.38,
+        "lpn": 0.7,
+        "cna": 1.95,
+        "total": 3.03
+      },
+      "nurse_hours_quarter": {
+        "rn": 6224,
+        "lpn": 11466,
+        "cna": 31941
+      }
+    },
+    "accordius-rose-manor-portopiccolo": {
+      "ccn": "345081",
+      "quarter": "2026-Q3",
+      "days_reported": 91,
+      "avg_daily_census": 98,
+      "resident_days_quarter": 8918,
+      "hprd": {
+        "rn": 0.45,
+        "lpn": 0.8,
+        "cna": 2.05,
+        "total": 3.3
+      },
+      "nurse_hours_quarter": {
+        "rn": 4013,
+        "lpn": 7134,
+        "cna": 18282
+      }
+    },
+    "mi-casa-life-care-az": {
+      "ccn": "035120",
+      "quarter": "2026-Q3",
+      "days_reported": 91,
+      "avg_daily_census": 155,
+      "resident_days_quarter": 14105,
+      "hprd": {
+        "rn": 0.42,
+        "lpn": 0.75,
+        "cna": 1.9,
+        "total": 3.07
+      },
+      "nurse_hours_quarter": {
+        "rn": 5924,
+        "lpn": 10579,
+        "cna": 26800
+      }
+    },
+    "crook-county-wy-rural": {
+      "ccn": "535029",
+      "quarter": "2026-Q3",
+      "days_reported": 91,
+      "avg_daily_census": 27,
+      "resident_days_quarter": 2457,
+      "hprd": {
+        "rn": 0.7,
+        "lpn": 0.9,
+        "cna": 2.4,
+        "total": 4.0
+      },
+      "nurse_hours_quarter": {
+        "rn": 1720,
+        "lpn": 2211,
+        "cna": 5897
+      }
+    },
+    "terraces-phoenix-humangood": {
+      "ccn": "035003",
+      "quarter": "2026-Q3",
+      "days_reported": 91,
+      "avg_daily_census": 59,
+      "resident_days_quarter": 5369,
+      "hprd": {
+        "rn": 0.95,
+        "lpn": 0.85,
+        "cna": 2.6,
+        "total": 4.4
+      },
+      "nurse_hours_quarter": {
+        "rn": 5101,
+        "lpn": 4564,
+        "cna": 13959
+      }
+    },
+    "haven-health-green-valley": {
+      "ccn": "035073",
+      "quarter": "2026-Q3",
+      "days_reported": 91,
+      "avg_daily_census": 99,
+      "resident_days_quarter": 9009,
+      "hprd": {
+        "rn": 0.8,
+        "lpn": 0.9,
+        "cna": 2.45,
+        "total": 4.15
+      },
+      "nurse_hours_quarter": {
+        "rn": 7207,
+        "lpn": 8108,
+        "cna": 22072
+      }
+    }
+  }
+}

@@ -148,7 +148,7 @@ def spend_signals(store: Store, facility_id: str) -> list[dict]:
                      "assumptions": vw["assumptions"],
                      "thresholds": {"red_above": scoring.VOLUME_RED, "yellow_from": scoring.VOLUME_YELLOW},
                      "rows": vol["rows"]},
-        "citation": {"source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)", "url": PBJ_URL},
+        "citation": {"source": "Resident-days: MOCK PBJ (real CMS PBJ pending from Dev B)", "url": PBJ_URL},
         "computed_at": now,
     }
 

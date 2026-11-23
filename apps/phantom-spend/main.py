@@ -4,6 +4,7 @@
 
 GET /health                 -> {"ok": true, ...}
 GET /spend                  -> {"facilities": [{id, name, spend_overall}]}
+GET /pbj/{facility_id}      -> MOCK PBJ staffing summary (until Dev B's service is live)
 GET /spend/{facility_id}    -> {"signals": SignalCard[]}   (ref_price_delta, ownership_overlap,
                                                              volume_sanity, spend_overall)
 """
@@ -41,3 +42,14 @@ def spend(facility_id: str) -> dict:
     if facility_id not in store.facilities:
         raise HTTPException(status_code=404, detail=f"unknown facility_id: {facility_id}")
     return {"signals": spend_signals(store, facility_id)}
+
+
+@app.get("/pbj/{facility_id}")
+def pbj(facility_id: str) -> dict:
+    """MOCK Payroll-Based Journal summary. Replaced by Dev B's real PBJ data."""
+    import json
+    from cards import SPEND
+    doc = json.loads((SPEND / "pbj-mock.json").read_text())
+    if facility_id not in doc["facilities"]:
+        raise HTTPException(status_code=404, detail=f"unknown facility_id: {facility_id}")
+    return {**doc["facilities"][facility_id], "_meta": doc["_meta"]}

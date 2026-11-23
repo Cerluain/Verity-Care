@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verity Care — Staff Check-in</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="/static/nav.js" defer></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .cat-medication { --c: #7c3aed; --bg: #f5f3ff; }
+    .cat-meal       { --c: #d97706; --bg: #fffbeb; }
+    .cat-therapy    { --c: #0284c7; --bg: #f0f9ff; }
+    .cat-vitals     { --c: #e11d48; --bg: #fff1f2; }
+    .cat-activity   { --c: #059669; --bg: #ecfdf5; }
+    .cat { border-left: 4px solid var(--c); background: var(--bg); }
+    .cat-dot { background: var(--c); }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-teal-50 to-slate-50 text-slate-900 min-h-screen">
+<div x-data="staffApp()" x-init="init()" class="max-w-md mx-auto px-4 pt-5 pb-28">
+
+  <!-- Brand -->
+  <div class="flex items-center gap-2 mb-5">
+    <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center text-lg">🩺</div>
+    <div>
+      <div class="font-semibold leading-tight">Verity Care · Staff</div>
+      <div class="text-xs text-slate-500">Mi Casa Nursing Center</div>
+    </div>
+    <template x-if="me"><button @click="logout()" class="ml-auto text-xs text-slate-500 underline">Switch staff</button></template>
+  </div>
+
+  <!-- STEP 1: login -->
+  <template x-if="!me">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+      <div class="text-lg font-semibold">Sign in with your staff ID</div>
+      <div class="text-sm text-slate-500">Your residents and today's tasks will load.</div>
+      <input x-model="idInput" @keydown.enter="login()" placeholder="e.g. RN-1187"
+             class="mt-4 w-full border border-slate-300 rounded-xl px-4 py-3 mono text-lg uppercase focus:outline-none focus:ring-2 focus:ring-teal-500">
+      <button @click="login()" class="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-3 font-semibold">Continue</button>
+      <template x-if="err"><div class="mt-2 text-sm text-red-600" x-text="err"></div></template>
+      <div class="mt-5 text-xs text-slate-500">Demo IDs</div>
+      <div class="flex flex-wrap gap-2 mt-1">
+        <template x-for="d in demoIds"><button @click="idInput = d; login()" class="mono text-xs bg-slate-100 hover:bg-slate-200 rounded-lg px-2 py-1" x-text="d"></button></template>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="me">
+    <div class="space-y-4">
+      <!-- Who am I -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-semibold" x-text="me.staff.name[0]"></div>
+        <div class="flex-1">
+          <div class="font-semibold" x-text="me.staff.name"></div>
+          <div class="text-xs text-slate-500"><span x-text="me.staff.role_label"></span> · <span class="mono" x-text="me.staff.id"></span> · <span x-text="me.staff.shift"></span></div>
+        </div>
+        <div class="text-right text-xs text-slate-500">now<div class="mono text-base text-slate-800" x-text="me.demo_time"></div></div>
+      </div>
+
+      <!-- STEP 2: pick resident -->
+      <template x-if="!resident">
+        <div>
+          <div class="text-sm font-semibold text-slate-700 mb-2">Your residents today</div>
+          <div class="space-y-2">
+            <template x-for="r in me.residents" :key="r.id">
+              <button @click="openResident(r)" class="w-full text-left bg-white hover:bg-teal-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-semibold" x-text="r.name[0]"></div>
+                <div class="flex-1">
+                  <div class="font-medium" x-text="r.name + ' (synthetic)'"></div>
+                  <div class="text-xs text-slate-500" x-text="'Room ' + r.room + ' · age ' + r.age"></div>
+                </div>
+                <template x-if="r.due"><span class="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-medium" x-text="r.due + ' due'"></span></template>
+                <template x-if="!r.due && r.open"><span class="text-xs bg-slate-100 text-slate-600 rounded-full px-2 py-0.5" x-text="r.open + ' later'"></span></template>
+                <template x-if="!r.open"><span class="text-xs bg-green-100 text-green-800 rounded-full px-2 py-0.5">all done</span></template>
+              </button>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- STEP 3: tasks for resident -->
+      <template x-if="resident">
+        <div class="space-y-3">
+          <button @click="resident = null; itemId = null; preview = null; refreshMe()" class="text-sm text-teal-700">← All residents</button>
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+            <div class="font-semibold text-lg" x-text="resident.resident.name + ' (synthetic)'"></div>
+            <div class="text-xs text-slate-500" x-text="'Room ' + resident.resident.room"></div>
+            <template x-if="resident.allergies.length">
+              <div class="mt-2 text-xs bg-red-50 text-red-700 rounded-lg px-2 py-1 inline-block">⚠️ Allergies: <span x-text="resident.allergies.join(', ')"></span></div>
+            </template>
+          </div>
+
+          <div class="text-sm font-semibold text-slate-700">Your tasks</div>
+          <template x-for="t in resident.tasks" :key="t.id">
+            <button @click="t.status !== 'verified' && t.status !== 'disputed' && (itemId = t.id)"
+                    class="w-full text-left rounded-xl p-3 cat flex items-center gap-3 shadow-sm"
+                    :class="['cat-' + t.category, itemId === t.id ? 'ring-2 ring-teal-600' : '', t.status === 'verified' ? 'opacity-60' : '']">
+              <span class="mono text-sm" x-text="t.time"></span>
+              <div class="flex-1">
+                <div class="font-medium" x-text="t.title"></div>
+                <div class="text-xs text-slate-600" x-text="t.detail"></div>
+              </div>
+              <span class="text-xs font-medium" :class="{verified:'text-green-700', not_verified:'text-amber-700', upcoming:'text-slate-500', disputed:'text-red-700'}[t.status]"
+                    x-text="{verified:'✓ done', not_verified:'due', upcoming:'later', disputed:'disputed'}[t.status]"></span>
+            </button>
+          </template>
+          <template x-if="!resident.tasks.length"><div class="text-sm text-slate-500">No tasks for your role.</div></template>
+
+          <label class="block w-full text-center rounded-2xl py-4 font-semibold text-lg cursor-pointer shadow"
+                 :class="itemId ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'">
+            📷 Take photo
+            <input type="file" accept="image/*" capture="environment" class="hidden" @change="onPhoto($event)">
+          </label>
+
+          <template x-if="preview">
+            <div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2 shadow-sm">
+              <img :src="preview" class="rounded-xl w-full">
+              <input x-model="note" placeholder="Optional note (e.g. ate about half)" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              <button @click="submit()" :disabled="busy" class="w-full bg-green-600 text-white rounded-xl py-3 font-semibold disabled:opacity-50"
+                      x-text="busy ? 'Uploading to IPFS & signing…' : 'Confirm check-in'"></button>
+            </div>
+          </template>
+
+          <template x-if="result">
+            <div class="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm space-y-1">
+              <div class="font-semibold text-green-800">✅ Checked in. The family sees it now.</div>
+              <template x-if="result.tx_hash"><div class="mono text-xs text-slate-600 break-all">tx <span x-text="result.tx_hash"></span>
+                <template x-if="result.explorer_url"><a :href="result.explorer_url" target="_blank" class="text-blue-600 underline"> Basescan ↗</a></template></div></template>
+              <template x-if="result.metadata_cid"><div class="mono text-xs text-slate-600 break-all">IPFS <span x-text="result.metadata_cid"></span></div></template>
+              <template x-if="!result.tx_hash"><div class="text-amber-700 text-xs">Saved, but the on-chain service is offline. Not anchored yet.</div></template>
+            </div>
+          </template>
+        </div>
+      </template>
+      <div class="text-xs text-slate-400">Demo: photograph a prop or a teammate, never a real resident.</div>
+    </div>
+  </template>
+</div>
+
+<script>
+function staffApp() {
+  return {
+    demoIds: ['RN-1187', 'LPN-0412', 'CNA-2231', 'CNA-2240', 'PT-0907', 'OT-0310'],
+    idInput: '', err: '', me: null, resident: null, itemId: null, preview: null, note: '', busy: false, result: null,
+    async init() {
+      const saved = localStorageGet('vc-staff');
+      if (saved) { this.idInput = saved; await this.login(); }
+    },
+    async login() {
+      this.err = '';
+      const r = await fetch('/care/staff/' + encodeURIComponent(this.idInput.trim()));
+      if (!r.ok) { this.err = 'Staff ID not found.'; return; }
+      this.me = await r.json(); localStorageSet('vc-staff', this.me.staff.id);
+    },
+    logout() { this.me = null; this.resident = null; this.idInput = ''; localStorageSet('vc-staff', ''); },
+    async refreshMe() { this.me = await fetch('/care/staff/' + this.me.staff.id).then(r => r.json()); },
+    async openResident(r) {
+      this.result = null; this.itemId = null; this.preview = null;
+      this.resident = await fetch(`/care/staff/${this.me.staff.id}/tasks/${r.id}`).then(r => r.json());
+    },
+    async onPhoto(e) {
+      const f = e.target.files[0]; if (!f) return;
+      this.result = null; this.preview = await downscale(f, 1280); e.target.value = '';
+    },
+    async submit() {
+      this.busy = true;
+      try {
+        const r = await fetch('/care/events', { method: 'POST', headers: {'content-type': 'application/json'},
+          body: JSON.stringify({ staff_id: this.me.staff.id, resident_id: this.resident.resident.id,
+                                 plan_item_id: this.itemId, photo: this.preview, note: this.note }) });
+        if (!r.ok) throw new Error(await r.text());
+        this.result = await r.json(); this.preview = null; this.itemId = null; this.note = '';
+        await this.openResident(this.resident.resident); this.result = this.result;
+      } catch (err) { alert('Check-in failed: ' + err.message); }
+      this.busy = false;
+    },
+  };
+}
+function localStorageGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+function downscale(file, max) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = rej; img.src = URL.createObjectURL(file);
+  });
+}
+</script>
+</body>
+</html>

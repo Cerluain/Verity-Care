@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Verity Care — Investigator Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <script src="/static/spend-extras.js"></script>
+  <script src="/static/nav.js" defer></script>
   <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
@@ -104,9 +107,20 @@
         <div class="text-slate-400">No facility selected.</div>
       </template>
 
-      <!-- SPEND -->
-      <template x-if="selected && activeTab === 'spend'">
+      <!-- SPENDING -->
+      <template x-if="selected && activeTab === 'spending'">
         <div>
+          <!-- Verdict banner from the spend_overall card -->
+          <template x-if="!loadingSpend && spendOverall()">
+            <div class="mb-5 rounded-lg p-4 flex items-center gap-3"
+                 :class="'pill-' + spendOverall().severity">
+              <span class="w-3 h-3 rounded-full" :class="'dot-' + spendOverall().severity"></span>
+              <div>
+                <div class="font-semibold" x-text="spendOverall().headline"></div>
+                <div class="text-xs opacity-80">Red only when all three checks agree: price gap, shared ownership, impossible volume.</div>
+              </div>
+            </div>
+          </template>
           <template x-if="loadingSpend">
             <div class="text-slate-500">Loading SPEND signals…</div>
           </template>
@@ -220,11 +234,145 @@
               </article>
             </template>
           </div>
+
+          <!-- Ownership graph -->
+          <template x-if="!loadingSpend && ownershipCard()">
+            <div class="mt-8 bg-white border border-slate-200 rounded-lg shadow-sm">
+              <div class="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
+                <div class="font-semibold">Who owns whom</div>
+                <span class="text-xs text-slate-500">red = facility and supplier share an owner · hover a box for details · * = illustrative name</span>
+              </div>
+              <div class="h-96" x-init="$nextTick(() => renderOwnershipGraph($el, ownershipCard().evidence.ownership_graph))"
+                   x-effect="spend.signals; $nextTick(() => renderOwnershipGraph($el, ownershipCard()?.evidence.ownership_graph))"></div>
+              <div class="px-5 py-2 text-xs text-slate-500 border-t border-slate-100"
+                   x-text="ownershipCard().evidence.ownership_graph.notes"></div>
+            </div>
+          </template>
+
+          <!-- Invoice table -->
+          <template x-if="!loadingSpend && invoiceRows().length">
+            <div class="mt-8 bg-white border border-slate-200 rounded-lg shadow-sm overflow-x-auto">
+              <div class="px-5 py-3 border-b border-slate-100 flex items-center gap-3">
+                <div class="font-semibold">Supplier invoices → cost report</div>
+                <span class="text-xs text-slate-500">Q3 2026 · invoice rows are demo data; reference prices are real CMS NADAC</span>
+              </div>
+              <table class="w-full text-sm">
+                <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                  <tr>
+                    <th class="text-left px-4 py-2">Drug</th>
+                    <th class="text-left px-4 py-2">Supplier</th>
+                    <th class="text-right px-4 py-2">Qty</th>
+                    <th class="text-right px-4 py-2">Paid / unit</th>
+                    <th class="text-right px-4 py-2">Fair price</th>
+                    <th class="text-right px-4 py-2">Markup</th>
+                    <th class="text-right px-4 py-2">Qty vs need</th>
+                    <th class="text-right px-4 py-2">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="r in invoiceRows()" :key="r.line_id">
+                    <tr class="border-t border-slate-100"
+                        :class="(r.price_severity === 'red' || r.volume_severity === 'red') ? 'bg-red-50/50' : ''">
+                      <td class="px-4 py-2">
+                        <div class="font-medium" x-text="r.drug"></div>
+                        <div class="text-xs text-slate-400 mono" x-text="r.invoice_no + ' · ' + r.invoice_date"></div>
+                      </td>
+                      <td class="px-4 py-2">
+                        <span x-text="r.supplier"></span>
+                        <template x-if="r.related_party_supplier">
+                          <span class="ml-1 text-xs pill-red px-1.5 py-0.5 rounded">same owner</span>
+                        </template>
+                      </td>
+                      <td class="px-4 py-2 text-right" x-text="r.qty.toLocaleString() + ' ' + r.unit"></td>
+                      <td class="px-4 py-2 text-right mono" x-text="money(r.unit_price)"></td>
+                      <td class="px-4 py-2 text-right mono text-slate-500" x-text="money(r.reference_price)"></td>
+                      <td class="px-4 py-2 text-right">
+                        <span class="px-1.5 py-0.5 rounded text-xs font-medium" :class="'pill-' + r.price_severity"
+                              x-text="r.price_ratio + '×'"></span>
+                      </td>
+                      <td class="px-4 py-2 text-right">
+                        <span class="px-1.5 py-0.5 rounded text-xs font-medium" :class="'pill-' + r.volume_severity"
+                              x-text="r.volume_ratio + '×'"></span>
+                      </td>
+                      <td class="px-4 py-2 text-right mono" x-text="'$' + r.total.toLocaleString()"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <div class="px-5 py-2 text-xs text-slate-500 border-t border-slate-100">
+                Fair price = CMS NADAC (national average acquisition cost). Markup: red &gt; 3×, yellow 1.5–3×.
+                Qty vs need = units bought ÷ what the resident census could use: red &gt; 1.5×.
+              </div>
+            </div>
+          </template>
         </div>
       </template>
 
-      <template x-if="selected && activeTab === 'shift'">
-        <div class="text-slate-500">SHIFT pillar — awaiting Leo's phantom-shift service.</div>
+      <!-- STAFFING (Leo / Dev B). Shows MOCK PBJ until phantom-shift is live. -->
+      <template x-if="selected && activeTab === 'staffing'">
+        <div x-init="loadStaffing()" x-effect="selected; loadStaffing()">
+          <div class="mb-4 text-xs pill-yellow inline-block px-2 py-1 rounded">
+            Mock staffing data — Leo's live SHIFT checks (licence collisions, suspended licences, impossible travel) plug in here.
+          </div>
+          <template x-if="staffing">
+            <div class="grid grid-cols-4 gap-4">
+              <div class="bg-white border border-slate-200 rounded-lg p-4">
+                <div class="text-xs text-slate-500 uppercase tracking-wider">Residents / day</div>
+                <div class="text-2xl font-semibold" x-text="staffing.avg_daily_census"></div>
+              </div>
+              <div class="bg-white border border-slate-200 rounded-lg p-4">
+                <div class="text-xs text-slate-500 uppercase tracking-wider">RN hrs / resident / day</div>
+                <div class="text-2xl font-semibold" x-text="staffing.hprd.rn"></div>
+              </div>
+              <div class="bg-white border border-slate-200 rounded-lg p-4">
+                <div class="text-xs text-slate-500 uppercase tracking-wider">Aide hrs / resident / day</div>
+                <div class="text-2xl font-semibold" x-text="staffing.hprd.cna"></div>
+              </div>
+              <div class="bg-white border border-slate-200 rounded-lg p-4">
+                <div class="text-xs text-slate-500 uppercase tracking-wider">Total nurse hrs / resident / day</div>
+                <div class="text-2xl font-semibold" x-text="staffing.hprd.total"></div>
+                <div class="text-xs text-slate-500">CMS 2024 rule target: 3.48</div>
+              </div>
+            </div>
+          </template>
+          <template x-if="shiftSignals.length">
+            <div class="mt-6 space-y-3">
+              <template x-for="c in shiftSignals" :key="c.signal_id">
+                <div class="bg-white border border-slate-200 rounded-lg p-4 flex gap-3 items-start">
+                  <span class="w-2 h-2 mt-2 rounded-full" :class="'dot-' + c.severity"></span>
+                  <div><div class="font-medium" x-text="c.headline"></div>
+                       <div class="text-sm text-slate-600" x-text="c.detail || ''"></div></div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- GUARDIAN REPORTS: disputes + missed care from the guardian timeline -->
+      <template x-if="selected && activeTab === 'guardian reports'">
+        <div x-init="loadGuardianReports()" x-effect="selected; loadGuardianReports()">
+          <div class="text-sm text-slate-600 mb-4">
+            Families verify daily care on the guardian timeline. Anything they dispute, or that was scheduled but never photo-verified, lands here.
+          </div>
+          <template x-if="!guardianReports.length">
+            <div class="text-slate-400">No guardian reports for this facility.</div>
+          </template>
+          <div class="space-y-3">
+            <template x-for="r in guardianReports" :key="r.id">
+              <div class="bg-white border border-slate-200 rounded-lg p-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs px-1.5 py-0.5 rounded font-medium"
+                        :class="r.kind === 'dispute' ? 'pill-red' : 'pill-yellow'"
+                        x-text="r.kind === 'dispute' ? 'disputed by family' : 'not verified'"></span>
+                  <span class="font-medium" x-text="r.title"></span>
+                  <span class="text-xs text-slate-500 ml-auto" x-text="r.resident + ' · ' + r.time"></span>
+                </div>
+                <div class="text-sm text-slate-600 mt-1" x-text="r.detail"></div>
+              </div>
+            </template>
+          </div>
+        </div>
       </template>
 
       <template x-if="selected && activeTab === 'voice'">
@@ -241,8 +389,11 @@
 <script>
 function dashboard() {
   return {
-    tabs: ['spend', 'shift', 'voice', 'case file'],
-    activeTab: 'spend',
+    tabs: ['spending', 'staffing', 'guardian reports', 'voice', 'case file'],
+    activeTab: 'spending',
+    staffing: null,
+    shiftSignals: [],
+    guardianReports: [],
     facilities: [],
     selected: null,
     spend: { signals: [] },
@@ -276,8 +427,14 @@ function dashboard() {
       try {
         const j = await fetch('/spend/' + f.id).then(r => r.json());
         j.signals = (j.signals || []).map(c => ({ ...c, _committing: false, _verify: null }));
+        // Show the SPEND verdict card first.
+        j.signals.sort((a, b) => (b.signal_type === 'spend_overall') - (a.signal_type === 'spend_overall'));
         this.spend = j;
-        const sev = j.signals.map(c => c.severity);
+        // SPEND's contribution to the facility colour comes from the spend_overall card
+        // (red only when all 3 SPEND checks agree), NOT from any single red signal.
+        // Otherwise a rural home with high prices alone (crook-county-wy-rural) turns red.
+        const overall = j.signals.find(c => c.signal_type === 'spend_overall');
+        const sev = overall ? [overall.severity] : j.signals.map(c => c.severity);
         this.aggregate_severity = sev.includes('red') ? 'red'
                                 : sev.includes('yellow') ? 'yellow'
                                 : sev.length ? 'green' : null;
@@ -344,6 +501,31 @@ function dashboard() {
       } catch (_) {
         // Rehydration is best-effort; a failure just leaves the card as uncommitted.
       }
+    },
+
+    // ---- SPEND tab helpers (Dev A) ----
+    spendOverall()   { return (this.spend.signals || []).find(c => c.signal_type === 'spend_overall'); },
+    ownershipCard()  { return (this.spend.signals || []).find(c => c.signal_type === 'ownership_overlap'); },
+    invoiceRows()    {
+      const c = (this.spend.signals || []).find(c => c.signal_type === 'ref_price_delta');
+      return c?.evidence?.line_items || [];
+    },
+    money(v) { return v >= 1 ? '$' + v.toFixed(2) : '$' + v.toFixed(4); },
+
+    async loadStaffing() {
+      if (!this.selected) return;
+      const id = this.selected.id;
+      try { const p = await fetch('/pbj/' + id).then(r => r.ok ? r.json() : null);
+            if (this.selected?.id === id) this.staffing = p; } catch (_) { this.staffing = null; }
+      try { const s = await fetch('/shift/' + id).then(r => r.json());
+            if (this.selected?.id === id) this.shiftSignals = s.signals || []; } catch (_) { this.shiftSignals = []; }
+    },
+
+    async loadGuardianReports() {
+      if (!this.selected) return;
+      const id = this.selected.id;
+      try { const r = await fetch('/care/reports?facility_id=' + id).then(r => r.json());
+            if (this.selected?.id === id) this.guardianReports = r.reports || []; } catch (_) { this.guardianReports = []; }
     },
 
     shortHash(h) {
