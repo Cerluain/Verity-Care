@@ -45,10 +45,14 @@ AGENTS.md
 contexts/                            # project brief + research + per-dev task lists
 ```
 
-## Chain decision
+## Chain decision — LOCKED
 
-Pending. Dev C is researching faucet UX right now. Will update `shared.env.example`
-+ this file as soon as deployed address exists.
+**Base Sepolia** (chainId 84532).
+
+- RPC: `https://sepolia.base.org`
+- Faucet: https://portal.cdp.coinbase.com/products/faucet — email signup only, 0.05 ETH / 24h, no mainnet-balance gate.
+- Explorer: https://sepolia.basescan.org
+- Deployed address: *filled by Dev C at H1*. Will update `shared.env.example` + this line.
 
 Until then, **run onchain service in MOCK mode**:
 ```bash

@@ -161,7 +161,7 @@ Notes for me:
 
 - (Nov 22) Scope locked: 3 pillars (Spend + Shift + Voice), not 2. Voice ships via Vapi+11Labs+Twilio live call during pitch.
 - (Nov 22) Project named **Verity Care**.
-- (Nov 22) Chain pick: Base Sepolia. Public, free, Basescan links credible in PDF.
+- (Nov 22) Chain pick: **Base Sepolia** (chainId 84532). Coinbase CDP faucet (https://portal.cdp.coinbase.com/products/faucet) — email signup, 0.05 ETH, no mainnet-balance gate. Alchemy + QuickNode faucets ruled out (both require 0.001 mainnet ETH). Thirdweb is backup. Solana devnet rejected: public-RPC airdrop returns 410, no Solana reps on team.
 - (Nov 22) No multisig tonight. Roadmap slide only.
 - (Nov 22) No ZK staffing circuit tonight. Trajectory invariants computed in plain code. UI says "verifiable" with roadmap asterisk.
 - (Nov 22) ZK invoice proof on Spend = P2 stretch for Dev A. Cut first if behind.
