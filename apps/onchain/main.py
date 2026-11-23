@@ -843,6 +843,18 @@ def _startup():
         db.init()
     except Exception as e:
         print(f"[onchain] db.init failed; continuing in JSONL-only mode. reason: {e}")
+    # Auto-rebalance signer wallets on boot so a half-funded dev-env recovers
+    # without manual intervention. Safe-no-op when all wallets are above threshold.
+    if not MOCK:
+        try:
+            from rebalance import rebalance
+            result = rebalance(quiet=True)
+            if result.get("rebalanced"):
+                for t in result["transfers"]:
+                    print(f"[rebalance] {t.get('donor','?')} → {t['role']}  "
+                          f"{t.get('amount_eth','?')} ETH  {t.get('status')}")
+        except Exception as e:
+            print(f"[rebalance] startup rebalance skipped: {e}")
 
 
 # ============================================================================
