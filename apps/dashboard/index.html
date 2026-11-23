@@ -72,7 +72,7 @@
             <span x-text="selected.beds + ' beds'"></span> ·
             parent <span class="font-medium text-slate-700" x-text="selected.parent_llc_hint"></span>
           </div>
-          <div class="text-xs text-slate-500 mt-1">
+          <div class="text-xs text-slate-500 mt-1" x-show="selected.id !== 'mi-casa-life-care-az'">
             cited:
             <a :href="selected.citation.url" target="_blank" class="text-blue-600 hover:underline"
                x-text="selected.citation.source"></a>
