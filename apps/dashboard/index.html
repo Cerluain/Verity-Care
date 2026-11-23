@@ -556,6 +556,12 @@ function dashboard() {
         j.signals = (j.signals || []).map(c => ({ ...c, _committing: false, _verify: null }));
         // Show the SPEND verdict card first.
         j.signals.sort((a, b) => (b.signal_type === 'spend_overall') - (a.signal_type === 'spend_overall'));
+
+        // Rehydrate from chain BEFORE handing the data to Alpine. If we assign
+        // this.spend first and mutate afterward, we'd be writing to the pre-proxy
+        // object references and the UI wouldn't re-render. Enrich, then assign.
+        await Promise.all(j.signals.map(c => this.rehydrateFromChain(c)));
+
         this.spend = j;
         // SPEND's contribution to the facility colour comes from the spend_overall card
         // (red only when all 3 SPEND checks agree), NOT from any single red signal.
@@ -566,15 +572,9 @@ function dashboard() {
                                 : sev.includes('yellow') ? 'yellow'
                                 : sev.length ? 'green' : null;
 
-        // Rehydrate from chain: for every card without a chain_commit, compute the
-        // canonical hash and ask the onchain service if we've ever committed that
-        // hash. If yes, attach the chain_commit block from the authoritative local
-        // log + live chain receipt. This is why refresh "forgets nothing" — the
-        // chain IS the database.
-        await Promise.all(j.signals.map(c => this.rehydrateFromChain(c)));
-
         // Any card that landed pre-anchored but not yet mined → start polling it.
-        for (const c of j.signals) {
+        // (Reads from this.spend, i.e. the proxied version, so mutations are reactive.)
+        for (const c of this.spend.signals) {
           if (c.chain_commit && c.chain_commit.tx_hash && !c.chain_commit.block_number) {
             this.startPolling(c);
           }
