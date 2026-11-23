@@ -1,0 +1,575 @@
+{
+    "signals": [
+        {
+            "signal_id": "spend-ref_price_delta-haven-health-green-valley-L007",
+            "pillar": "spend",
+            "signal_type": "ref_price_delta",
+            "facility_id": "haven-health-green-valley",
+            "severity": "green",
+            "headline": "Omeprazole DR 20 mg capsule invoiced at 1.15\u00d7 NADAC (+15%)",
+            "detail": "Supplier invoice INV-HAVE-2607 (National drug wholesaler): $0.04/capsule vs CMS NADAC $0.03/capsule. 0 of 12 lines above 3\u00d7. Invoices feed the facility cost report (CMS Form 2540).",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "line_id": "L007",
+                "drug": "Omeprazole DR 20 mg capsule",
+                "ndc": "82009018310",
+                "unit_price": 0.0359,
+                "reference_price": 0.0312,
+                "ratio": 1.15,
+                "supplier_id": "national-wholesaler",
+                "thresholds": {
+                    "red_above": 3.0,
+                    "yellow_from": 1.5
+                },
+                "reference": "CMS NADAC per unit, effective 2026-11-18",
+                "line_items": [
+                    {
+                        "line_id": "L001",
+                        "invoice_no": "INV-HAVE-2601",
+                        "invoice_date": "2026-07-08",
+                        "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                        "ndc": "00002773701",
+                        "unit": "vial",
+                        "qty": 39,
+                        "unit_price": 26.4284,
+                        "total": 1030.71,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 24.0258,
+                        "price_ratio": 1.1,
+                        "price_severity": "green",
+                        "expected_max_units": 43,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L002",
+                        "invoice_no": "INV-HAVE-2602",
+                        "invoice_date": "2026-07-22",
+                        "drug": "Eliquis (apixaban) 5 mg tablet",
+                        "ndc": "00003089421",
+                        "unit": "tablet",
+                        "qty": 1532,
+                        "unit_price": 5.7971,
+                        "total": 8881.16,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 5.521,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 1802,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L003",
+                        "invoice_no": "INV-HAVE-2603",
+                        "invoice_date": "2026-08-05",
+                        "drug": "Januvia (sitagliptin) 100 mg tablet",
+                        "ndc": "00006027701",
+                        "unit": "tablet",
+                        "qty": 486,
+                        "unit_price": 10.549,
+                        "total": 5126.81,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 10.549,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 541,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L004",
+                        "invoice_no": "INV-HAVE-2604",
+                        "invoice_date": "2026-08-19",
+                        "drug": "Metformin 500 mg tablet",
+                        "ndc": "83301000803",
+                        "unit": "tablet",
+                        "qty": 1946,
+                        "unit_price": 0.0163,
+                        "total": 31.72,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0148,
+                        "price_ratio": 1.1,
+                        "price_severity": "green",
+                        "expected_max_units": 2162,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L005",
+                        "invoice_no": "INV-HAVE-2605",
+                        "invoice_date": "2026-09-02",
+                        "drug": "Atorvastatin 40 mg tablet",
+                        "ndc": "82009017810",
+                        "unit": "tablet",
+                        "qty": 2680,
+                        "unit_price": 0.0385,
+                        "total": 103.18,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0367,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 3153,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L006",
+                        "invoice_no": "INV-HAVE-2606",
+                        "invoice_date": "2026-09-16",
+                        "drug": "Amlodipine 5 mg tablet",
+                        "ndc": "82009002710",
+                        "unit": "tablet",
+                        "qty": 2027,
+                        "unit_price": 0.0101,
+                        "total": 20.47,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0101,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 2252,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L007",
+                        "invoice_no": "INV-HAVE-2607",
+                        "invoice_date": "2026-07-08",
+                        "drug": "Omeprazole DR 20 mg capsule",
+                        "ndc": "82009018310",
+                        "unit": "capsule",
+                        "qty": 2432,
+                        "unit_price": 0.0359,
+                        "total": 87.31,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0312,
+                        "price_ratio": 1.15,
+                        "price_severity": "green",
+                        "expected_max_units": 2703,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L008",
+                        "invoice_no": "INV-HAVE-2608",
+                        "invoice_date": "2026-07-22",
+                        "drug": "Furosemide 40 mg tablet",
+                        "ndc": "83980000310",
+                        "unit": "tablet",
+                        "qty": 1532,
+                        "unit_price": 0.0308,
+                        "total": 47.19,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0293,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 1802,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L009",
+                        "invoice_no": "INV-HAVE-2609",
+                        "invoice_date": "2026-08-05",
+                        "drug": "Gabapentin 300 mg capsule",
+                        "ndc": "83301000403",
+                        "unit": "capsule",
+                        "qty": 3649,
+                        "unit_price": 0.0367,
+                        "total": 133.92,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0334,
+                        "price_ratio": 1.1,
+                        "price_severity": "green",
+                        "expected_max_units": 4054,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L010",
+                        "invoice_no": "INV-HAVE-2610",
+                        "invoice_date": "2026-08-19",
+                        "drug": "Quetiapine 25 mg tablet",
+                        "ndc": "82009009501",
+                        "unit": "tablet",
+                        "qty": 1081,
+                        "unit_price": 0.0226,
+                        "total": 24.43,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0226,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 1351,
+                        "volume_ratio": 0.8,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L011",
+                        "invoice_no": "INV-HAVE-2611",
+                        "invoice_date": "2026-09-02",
+                        "drug": "Sertraline 50 mg tablet",
+                        "ndc": "82009004905",
+                        "unit": "tablet",
+                        "qty": 1532,
+                        "unit_price": 0.0373,
+                        "total": 57.14,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0355,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 1802,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L012",
+                        "invoice_no": "INV-HAVE-2612",
+                        "invoice_date": "2026-09-16",
+                        "drug": "Acetaminophen 325 mg tablet",
+                        "ndc": "82568000103",
+                        "unit": "tablet",
+                        "qty": 16216,
+                        "unit_price": 0.0215,
+                        "total": 348.64,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0215,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 18018,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    }
+                ]
+            },
+            "citation": {
+                "source": "CMS NADAC (National Average Drug Acquisition Cost) 2026",
+                "url": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-ownership_overlap-haven-health-green-valley",
+            "pillar": "spend",
+            "signal_type": "ownership_overlap",
+            "facility_id": "haven-health-green-valley",
+            "severity": "green",
+            "headline": "No common ownership between facility and its suppliers",
+            "detail": "Suppliers checked: National drug wholesaler",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "hops": null,
+                "shared_node": null,
+                "path": [],
+                "supplier_id": "national-wholesaler",
+                "suppliers": [
+                    {
+                        "supplier_id": "national-wholesaler",
+                        "severity": "green",
+                        "hops": null,
+                        "shared_node": null,
+                        "path": [],
+                        "shared_registered_agents": []
+                    }
+                ],
+                "max_hops": 3,
+                "ownership_graph": {
+                    "nodes": [
+                        {
+                            "id": "haven-health-green-valley",
+                            "label": "Haven Health Green Valley",
+                            "type": "facility",
+                            "illustrative": false,
+                            "details": {
+                                "state": "AZ"
+                            }
+                        },
+                        {
+                            "id": "haven-health",
+                            "label": "Haven Health (regional AZ chain)",
+                            "type": "parent",
+                            "illustrative": false,
+                            "details": {
+                                "state": "AZ"
+                            }
+                        },
+                        {
+                            "id": "national-wholesaler",
+                            "label": "National drug wholesaler",
+                            "type": "supplier",
+                            "illustrative": true,
+                            "details": {
+                                "note": "Generic national wholesaler (illustrative)"
+                            }
+                        },
+                        {
+                            "id": "wholesaler-public",
+                            "label": "Publicly traded parent",
+                            "type": "parent",
+                            "illustrative": true,
+                            "details": {}
+                        }
+                    ],
+                    "edges": [
+                        {
+                            "from": "haven-health-green-valley",
+                            "to": "haven-health",
+                            "type": "owned_by",
+                            "label": "operated by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "national-wholesaler",
+                            "to": "wholesaler-public",
+                            "type": "owned_by",
+                            "label": "owned by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "national-wholesaler",
+                            "to": "haven-health-green-valley",
+                            "type": "supplies",
+                            "label": "invoiced $15,893 (Q3 2026)",
+                            "related_party": false
+                        }
+                    ],
+                    "notes": "No common ownership between facility and supplier."
+                }
+            },
+            "citation": {
+                "source": "CMS Nursing Home Compare \u2014 Provider Information dataset (Oct 2026)",
+                "url": "https://www.medicare.gov/care-compare/details/nursing-home/035073"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-volume_sanity-haven-health-green-valley-L001",
+            "pillar": "spend",
+            "signal_type": "volume_sanity",
+            "facility_id": "haven-health-green-valley",
+            "severity": "green",
+            "headline": "Insulin lispro 100 U/mL, 10 mL vial: 39 billed vs ~43 expected (0.9\u00d7)",
+            "detail": "9,009 resident-days in 2026-Q3 (~99 residents). Assumes 12% of residents on this drug at 0.04 vial/day.",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                "line_id": "L001",
+                "billed_units": 39,
+                "expected_max": 43,
+                "ratio": 0.9,
+                "resident_days": 9009,
+                "census_source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+                "assumptions": {
+                    "share_of_residents": 0.12,
+                    "units_per_user_per_day": 0.04
+                },
+                "thresholds": {
+                    "red_above": 1.5,
+                    "yellow_from": 1.2
+                },
+                "rows": [
+                    {
+                        "line_id": "L001",
+                        "drug_id": "insulin-lispro-vial",
+                        "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                        "billed_units": 39,
+                        "expected_max": 43,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.12,
+                            "units_per_user_per_day": 0.04
+                        }
+                    },
+                    {
+                        "line_id": "L002",
+                        "drug_id": "eliquis-5",
+                        "drug": "Eliquis (apixaban) 5 mg tablet",
+                        "billed_units": 1532,
+                        "expected_max": 1802,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.1,
+                            "units_per_user_per_day": 2
+                        }
+                    },
+                    {
+                        "line_id": "L003",
+                        "drug_id": "januvia-100",
+                        "drug": "Januvia (sitagliptin) 100 mg tablet",
+                        "billed_units": 486,
+                        "expected_max": 541,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.06,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L004",
+                        "drug_id": "metformin-500",
+                        "drug": "Metformin 500 mg tablet",
+                        "billed_units": 1946,
+                        "expected_max": 2162,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.12,
+                            "units_per_user_per_day": 2
+                        }
+                    },
+                    {
+                        "line_id": "L005",
+                        "drug_id": "atorvastatin-40",
+                        "drug": "Atorvastatin 40 mg tablet",
+                        "billed_units": 2680,
+                        "expected_max": 3153,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.35,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L006",
+                        "drug_id": "amlodipine-5",
+                        "drug": "Amlodipine 5 mg tablet",
+                        "billed_units": 2027,
+                        "expected_max": 2252,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.25,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L007",
+                        "drug_id": "omeprazole-20",
+                        "drug": "Omeprazole DR 20 mg capsule",
+                        "billed_units": 2432,
+                        "expected_max": 2703,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.3,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L008",
+                        "drug_id": "furosemide-40",
+                        "drug": "Furosemide 40 mg tablet",
+                        "billed_units": 1532,
+                        "expected_max": 1802,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L009",
+                        "drug_id": "gabapentin-300",
+                        "drug": "Gabapentin 300 mg capsule",
+                        "billed_units": 3649,
+                        "expected_max": 4054,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.15,
+                            "units_per_user_per_day": 3
+                        }
+                    },
+                    {
+                        "line_id": "L010",
+                        "drug_id": "quetiapine-25",
+                        "drug": "Quetiapine 25 mg tablet",
+                        "billed_units": 1081,
+                        "expected_max": 1351,
+                        "volume_ratio": 0.8,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.15,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L011",
+                        "drug_id": "sertraline-50",
+                        "drug": "Sertraline 50 mg tablet",
+                        "billed_units": 1532,
+                        "expected_max": 1802,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L012",
+                        "drug_id": "acetaminophen-325",
+                        "drug": "Acetaminophen 325 mg tablet",
+                        "billed_units": 16216,
+                        "expected_max": 18018,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.5,
+                            "units_per_user_per_day": 4
+                        }
+                    }
+                ]
+            },
+            "citation": {
+                "source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)",
+                "url": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-spend_overall-haven-health-green-valley",
+            "pillar": "spend",
+            "signal_type": "spend_overall",
+            "facility_id": "haven-health-green-valley",
+            "severity": "green",
+            "headline": "SPEND: no procurement anomalies",
+            "detail": "Red only when price, ownership and volume all agree. Use this card for the facility roll-up.",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "ref_price_delta": "green",
+                "ownership_overlap": "green",
+                "volume_sanity": "green"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        }
+    ]
+}

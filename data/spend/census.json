@@ -1,0 +1,144 @@
+{
+  "_meta": {
+    "data_provenance": "demo_grounded",
+    "note": "Authored for the demo by scripts/build_demo_data.py. Reference prices are real (NADAC).",
+    "usage_assumptions": {
+      "insulin-lispro-vial": {
+        "share_of_residents": 0.12,
+        "units_per_user_per_day": 0.04
+      },
+      "eliquis-5": {
+        "share_of_residents": 0.1,
+        "units_per_user_per_day": 2
+      },
+      "jardiance-10": {
+        "share_of_residents": 0.06,
+        "units_per_user_per_day": 1
+      },
+      "januvia-100": {
+        "share_of_residents": 0.06,
+        "units_per_user_per_day": 1
+      },
+      "xarelto-20": {
+        "share_of_residents": 0.04,
+        "units_per_user_per_day": 1
+      },
+      "enoxaparin-40": {
+        "share_of_residents": 0.03,
+        "units_per_user_per_day": 1
+      },
+      "metformin-500": {
+        "share_of_residents": 0.12,
+        "units_per_user_per_day": 2
+      },
+      "atorvastatin-40": {
+        "share_of_residents": 0.35,
+        "units_per_user_per_day": 1
+      },
+      "lisinopril-10": {
+        "share_of_residents": 0.2,
+        "units_per_user_per_day": 1
+      },
+      "amlodipine-5": {
+        "share_of_residents": 0.25,
+        "units_per_user_per_day": 1
+      },
+      "omeprazole-20": {
+        "share_of_residents": 0.3,
+        "units_per_user_per_day": 1
+      },
+      "furosemide-40": {
+        "share_of_residents": 0.2,
+        "units_per_user_per_day": 1
+      },
+      "levothyroxine-50": {
+        "share_of_residents": 0.18,
+        "units_per_user_per_day": 1
+      },
+      "gabapentin-300": {
+        "share_of_residents": 0.15,
+        "units_per_user_per_day": 3
+      },
+      "sertraline-50": {
+        "share_of_residents": 0.2,
+        "units_per_user_per_day": 1
+      },
+      "donepezil-10": {
+        "share_of_residents": 0.2,
+        "units_per_user_per_day": 1
+      },
+      "memantine-10": {
+        "share_of_residents": 0.12,
+        "units_per_user_per_day": 2
+      },
+      "tamsulosin-04": {
+        "share_of_residents": 0.08,
+        "units_per_user_per_day": 1
+      },
+      "quetiapine-25": {
+        "share_of_residents": 0.15,
+        "units_per_user_per_day": 1
+      },
+      "acetaminophen-325": {
+        "share_of_residents": 0.5,
+        "units_per_user_per_day": 4
+      }
+    }
+  },
+  "facilities": {
+    "buffalo-center-centers-health": {
+      "beds": 200,
+      "occupancy": 0.9,
+      "avg_residents": 180,
+      "resident_days_quarter": 16380,
+      "quarter": "2026-Q3",
+      "source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+      "data_provenance": "demo_grounded"
+    },
+    "accordius-rose-manor-portopiccolo": {
+      "beds": 111,
+      "occupancy": 0.88,
+      "avg_residents": 98,
+      "resident_days_quarter": 8918,
+      "quarter": "2026-Q3",
+      "source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+      "data_provenance": "demo_grounded"
+    },
+    "mi-casa-life-care-az": {
+      "beds": 180,
+      "occupancy": 0.86,
+      "avg_residents": 155,
+      "resident_days_quarter": 14105,
+      "quarter": "2026-Q3",
+      "source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+      "data_provenance": "demo_grounded"
+    },
+    "crook-county-wy-rural": {
+      "beds": 32,
+      "occupancy": 0.85,
+      "avg_residents": 27,
+      "resident_days_quarter": 2457,
+      "quarter": "2026-Q3",
+      "source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+      "data_provenance": "demo_grounded"
+    },
+    "terraces-phoenix-humangood": {
+      "beds": 64,
+      "occupancy": 0.92,
+      "avg_residents": 59,
+      "resident_days_quarter": 5369,
+      "quarter": "2026-Q3",
+      "source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+      "data_provenance": "demo_grounded"
+    },
+    "haven-health-green-valley": {
+      "beds": 111,
+      "occupancy": 0.89,
+      "avg_residents": 99,
+      "resident_days_quarter": 9009,
+      "quarter": "2026-Q3",
+      "source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+      "data_provenance": "demo_grounded"
+    }
+  }
+}

@@ -1,0 +1,579 @@
+{
+    "signals": [
+        {
+            "signal_id": "spend-ref_price_delta-crook-county-wy-rural-L001",
+            "pillar": "spend",
+            "signal_type": "ref_price_delta",
+            "facility_id": "crook-county-wy-rural",
+            "severity": "red",
+            "headline": "Insulin lispro 100 U/mL, 10 mL vial invoiced at 3.2\u00d7 NADAC (+220%)",
+            "detail": "Supplier invoice INV-CROO-2601 (High Plains Medical Distributors): $76.88/vial vs CMS NADAC $24.03/vial. 1 of 12 lines above 3\u00d7. Invoices feed the facility cost report (CMS Form 2540).",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "line_id": "L001",
+                "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                "ndc": "00002773701",
+                "unit_price": 76.8826,
+                "reference_price": 24.0258,
+                "ratio": 3.2,
+                "supplier_id": "high-plains-medical",
+                "thresholds": {
+                    "red_above": 3.0,
+                    "yellow_from": 1.5
+                },
+                "reference": "CMS NADAC per unit, effective 2026-11-18",
+                "line_items": [
+                    {
+                        "line_id": "L001",
+                        "invoice_no": "INV-CROO-2601",
+                        "invoice_date": "2026-07-08",
+                        "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                        "ndc": "00002773701",
+                        "unit": "vial",
+                        "qty": 12,
+                        "unit_price": 76.8826,
+                        "total": 922.59,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 24.0258,
+                        "price_ratio": 3.2,
+                        "price_severity": "red",
+                        "expected_max_units": 12,
+                        "volume_ratio": 1.02,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L002",
+                        "invoice_no": "INV-CROO-2602",
+                        "invoice_date": "2026-07-22",
+                        "drug": "Enoxaparin 40 mg/0.4 mL syringe",
+                        "ndc": "81952012424",
+                        "unit": "syringe",
+                        "qty": 66,
+                        "unit_price": 7.7921,
+                        "total": 514.28,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 2.7829,
+                        "price_ratio": 2.8,
+                        "price_severity": "yellow",
+                        "expected_max_units": 74,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L003",
+                        "invoice_no": "INV-CROO-2603",
+                        "invoice_date": "2026-08-05",
+                        "drug": "Eliquis (apixaban) 5 mg tablet",
+                        "ndc": "00003089421",
+                        "unit": "tablet",
+                        "qty": 442,
+                        "unit_price": 6.9013,
+                        "total": 3050.37,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 5.521,
+                        "price_ratio": 1.25,
+                        "price_severity": "green",
+                        "expected_max_units": 491,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L004",
+                        "invoice_no": "INV-CROO-2604",
+                        "invoice_date": "2026-08-19",
+                        "drug": "Metformin 500 mg tablet",
+                        "ndc": "83301000803",
+                        "unit": "tablet",
+                        "qty": 531,
+                        "unit_price": 0.0178,
+                        "total": 9.45,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0148,
+                        "price_ratio": 1.2,
+                        "price_severity": "green",
+                        "expected_max_units": 590,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L005",
+                        "invoice_no": "INV-CROO-2605",
+                        "invoice_date": "2026-09-02",
+                        "drug": "Atorvastatin 40 mg tablet",
+                        "ndc": "82009017810",
+                        "unit": "tablet",
+                        "qty": 731,
+                        "unit_price": 0.0477,
+                        "total": 34.87,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0367,
+                        "price_ratio": 1.3,
+                        "price_severity": "green",
+                        "expected_max_units": 860,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L006",
+                        "invoice_no": "INV-CROO-2606",
+                        "invoice_date": "2026-09-16",
+                        "drug": "Lisinopril 10 mg tablet",
+                        "ndc": "82009006410",
+                        "unit": "tablet",
+                        "qty": 442,
+                        "unit_price": 0.0226,
+                        "total": 9.99,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0181,
+                        "price_ratio": 1.25,
+                        "price_severity": "green",
+                        "expected_max_units": 491,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L007",
+                        "invoice_no": "INV-CROO-2607",
+                        "invoice_date": "2026-07-08",
+                        "drug": "Amlodipine 5 mg tablet",
+                        "ndc": "82009002710",
+                        "unit": "tablet",
+                        "qty": 522,
+                        "unit_price": 0.0121,
+                        "total": 6.32,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0101,
+                        "price_ratio": 1.2,
+                        "price_severity": "green",
+                        "expected_max_units": 614,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L008",
+                        "invoice_no": "INV-CROO-2608",
+                        "invoice_date": "2026-07-22",
+                        "drug": "Furosemide 40 mg tablet",
+                        "ndc": "83980000310",
+                        "unit": "tablet",
+                        "qty": 442,
+                        "unit_price": 0.0381,
+                        "total": 16.84,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0293,
+                        "price_ratio": 1.3,
+                        "price_severity": "green",
+                        "expected_max_units": 491,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L009",
+                        "invoice_no": "INV-CROO-2609",
+                        "invoice_date": "2026-08-05",
+                        "drug": "Levothyroxine 50 mcg tablet",
+                        "ndc": "72603066102",
+                        "unit": "tablet",
+                        "qty": 398,
+                        "unit_price": 0.051,
+                        "total": 20.3,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0425,
+                        "price_ratio": 1.2,
+                        "price_severity": "green",
+                        "expected_max_units": 442,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L010",
+                        "invoice_no": "INV-CROO-2610",
+                        "invoice_date": "2026-08-19",
+                        "drug": "Donepezil 10 mg tablet",
+                        "ndc": "82009012005",
+                        "unit": "tablet",
+                        "qty": 418,
+                        "unit_price": 0.0614,
+                        "total": 25.67,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0491,
+                        "price_ratio": 1.25,
+                        "price_severity": "green",
+                        "expected_max_units": 491,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L011",
+                        "invoice_no": "INV-CROO-2611",
+                        "invoice_date": "2026-09-02",
+                        "drug": "Omeprazole DR 20 mg capsule",
+                        "ndc": "82009018310",
+                        "unit": "capsule",
+                        "qty": 663,
+                        "unit_price": 0.0374,
+                        "total": 24.8,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0312,
+                        "price_ratio": 1.2,
+                        "price_severity": "green",
+                        "expected_max_units": 737,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L012",
+                        "invoice_no": "INV-CROO-2612",
+                        "invoice_date": "2026-09-16",
+                        "drug": "Acetaminophen 325 mg tablet",
+                        "ndc": "82568000103",
+                        "unit": "tablet",
+                        "qty": 4668,
+                        "unit_price": 0.0247,
+                        "total": 115.3,
+                        "supplier_id": "high-plains-medical",
+                        "supplier": "High Plains Medical Distributors",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0215,
+                        "price_ratio": 1.15,
+                        "price_severity": "green",
+                        "expected_max_units": 4914,
+                        "volume_ratio": 0.95,
+                        "volume_severity": "green"
+                    }
+                ]
+            },
+            "citation": {
+                "source": "CMS NADAC (National Average Drug Acquisition Cost) 2026",
+                "url": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-ownership_overlap-crook-county-wy-rural",
+            "pillar": "spend",
+            "signal_type": "ownership_overlap",
+            "facility_id": "crook-county-wy-rural",
+            "severity": "green",
+            "headline": "No common ownership between facility and its suppliers",
+            "detail": "Suppliers checked: High Plains Medical Distributors",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "hops": null,
+                "shared_node": null,
+                "path": [],
+                "supplier_id": "high-plains-medical",
+                "suppliers": [
+                    {
+                        "supplier_id": "high-plains-medical",
+                        "severity": "green",
+                        "hops": null,
+                        "shared_node": null,
+                        "path": [],
+                        "shared_registered_agents": []
+                    }
+                ],
+                "max_hops": 3,
+                "ownership_graph": {
+                    "nodes": [
+                        {
+                            "id": "crook-county-wy-rural",
+                            "label": "Crook County Medical Services District LTC",
+                            "type": "facility",
+                            "illustrative": false,
+                            "details": {
+                                "state": "WY"
+                            }
+                        },
+                        {
+                            "id": "crook-county-msd",
+                            "label": "Crook County Medical Services District",
+                            "type": "parent",
+                            "illustrative": false,
+                            "details": {
+                                "state": "WY",
+                                "note": "County hospital district (non-profit)"
+                            }
+                        },
+                        {
+                            "id": "high-plains-medical",
+                            "label": "High Plains Medical Distributors",
+                            "type": "supplier",
+                            "illustrative": true,
+                            "details": {
+                                "state": "SD",
+                                "note": "Regional distributor serving frontier WY (illustrative)"
+                            }
+                        },
+                        {
+                            "id": "high-plains-owner",
+                            "label": "Independent owner",
+                            "type": "parent",
+                            "illustrative": true,
+                            "details": {
+                                "state": "SD"
+                            }
+                        }
+                    ],
+                    "edges": [
+                        {
+                            "from": "crook-county-wy-rural",
+                            "to": "crook-county-msd",
+                            "type": "owned_by",
+                            "label": "operated by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "high-plains-medical",
+                            "to": "high-plains-owner",
+                            "type": "owned_by",
+                            "label": "owned by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "high-plains-medical",
+                            "to": "crook-county-wy-rural",
+                            "type": "supplies",
+                            "label": "invoiced $4,751 (Q3 2026)",
+                            "related_party": false
+                        }
+                    ],
+                    "notes": "Public district owner; independent regional supplier. Thin frontier market explains high unit prices."
+                }
+            },
+            "citation": {
+                "source": "CMS Nursing Home Compare \u2014 Provider Information dataset (Oct 2026)",
+                "url": "https://data.cms.gov/provider-data/dataset/4pq5-n9py"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-volume_sanity-crook-county-wy-rural-L001",
+            "pillar": "spend",
+            "signal_type": "volume_sanity",
+            "facility_id": "crook-county-wy-rural",
+            "severity": "green",
+            "headline": "Insulin lispro 100 U/mL, 10 mL vial: 12 billed vs ~12 expected (1.02\u00d7)",
+            "detail": "2,457 resident-days in 2026-Q3 (~27 residents). Assumes 12% of residents on this drug at 0.04 vial/day.",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                "line_id": "L001",
+                "billed_units": 12,
+                "expected_max": 12,
+                "ratio": 1.02,
+                "resident_days": 2457,
+                "census_source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+                "assumptions": {
+                    "share_of_residents": 0.12,
+                    "units_per_user_per_day": 0.04
+                },
+                "thresholds": {
+                    "red_above": 1.5,
+                    "yellow_from": 1.2
+                },
+                "rows": [
+                    {
+                        "line_id": "L001",
+                        "drug_id": "insulin-lispro-vial",
+                        "drug": "Insulin lispro 100 U/mL, 10 mL vial",
+                        "billed_units": 12,
+                        "expected_max": 12,
+                        "volume_ratio": 1.02,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.12,
+                            "units_per_user_per_day": 0.04
+                        }
+                    },
+                    {
+                        "line_id": "L002",
+                        "drug_id": "enoxaparin-40",
+                        "drug": "Enoxaparin 40 mg/0.4 mL syringe",
+                        "billed_units": 66,
+                        "expected_max": 74,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.03,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L003",
+                        "drug_id": "eliquis-5",
+                        "drug": "Eliquis (apixaban) 5 mg tablet",
+                        "billed_units": 442,
+                        "expected_max": 491,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.1,
+                            "units_per_user_per_day": 2
+                        }
+                    },
+                    {
+                        "line_id": "L004",
+                        "drug_id": "metformin-500",
+                        "drug": "Metformin 500 mg tablet",
+                        "billed_units": 531,
+                        "expected_max": 590,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.12,
+                            "units_per_user_per_day": 2
+                        }
+                    },
+                    {
+                        "line_id": "L005",
+                        "drug_id": "atorvastatin-40",
+                        "drug": "Atorvastatin 40 mg tablet",
+                        "billed_units": 731,
+                        "expected_max": 860,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.35,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L006",
+                        "drug_id": "lisinopril-10",
+                        "drug": "Lisinopril 10 mg tablet",
+                        "billed_units": 442,
+                        "expected_max": 491,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L007",
+                        "drug_id": "amlodipine-5",
+                        "drug": "Amlodipine 5 mg tablet",
+                        "billed_units": 522,
+                        "expected_max": 614,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.25,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L008",
+                        "drug_id": "furosemide-40",
+                        "drug": "Furosemide 40 mg tablet",
+                        "billed_units": 442,
+                        "expected_max": 491,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L009",
+                        "drug_id": "levothyroxine-50",
+                        "drug": "Levothyroxine 50 mcg tablet",
+                        "billed_units": 398,
+                        "expected_max": 442,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.18,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L010",
+                        "drug_id": "donepezil-10",
+                        "drug": "Donepezil 10 mg tablet",
+                        "billed_units": 418,
+                        "expected_max": 491,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L011",
+                        "drug_id": "omeprazole-20",
+                        "drug": "Omeprazole DR 20 mg capsule",
+                        "billed_units": 663,
+                        "expected_max": 737,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.3,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L012",
+                        "drug_id": "acetaminophen-325",
+                        "drug": "Acetaminophen 325 mg tablet",
+                        "billed_units": 4668,
+                        "expected_max": 4914,
+                        "volume_ratio": 0.95,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.5,
+                            "units_per_user_per_day": 4
+                        }
+                    }
+                ]
+            },
+            "citation": {
+                "source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)",
+                "url": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-spend_overall-crook-county-wy-rural",
+            "pillar": "spend",
+            "signal_type": "spend_overall",
+            "facility_id": "crook-county-wy-rural",
+            "severity": "yellow",
+            "headline": "SPEND: 1 red of 3 signals \u2014 review, not referral",
+            "detail": "Red only when price, ownership and volume all agree. Use this card for the facility roll-up.",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "ref_price_delta": "red",
+                "ownership_overlap": "green",
+                "volume_sanity": "green"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        }
+    ]
+}

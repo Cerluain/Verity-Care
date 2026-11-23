@@ -1,0 +1,400 @@
+{
+  "_meta": {
+    "data_provenance": "demo_grounded",
+    "note": "Authored for the demo by scripts/build_demo_data.py. Reference prices are real (NADAC)."
+  },
+  "facilities": {
+    "buffalo-center-centers-health": {
+      "nodes": [
+        {
+          "id": "buffalo-center-centers-health",
+          "label": "Buffalo Center for Rehabilitation and Nursing",
+          "type": "facility",
+          "illustrative": false,
+          "details": {
+            "state": "NY"
+          }
+        },
+        {
+          "id": "delaware-operations-assoc",
+          "label": "Delaware Operations Assoc LLC",
+          "type": "operator",
+          "illustrative": false,
+          "details": {
+            "state": "NY",
+            "note": "Operating entity named in facilities.json"
+          }
+        },
+        {
+          "id": "centers-health-care",
+          "label": "Centers Health Care",
+          "type": "parent",
+          "illustrative": false,
+          "details": {
+            "state": "NY",
+            "note": "Parent named in NY AG lawsuit (Nov 2023)"
+          }
+        },
+        {
+          "id": "empire-clinical-supply",
+          "label": "Empire Clinical Supply LLC",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "state": "DE",
+            "note": "Owner-controlled vendor (illustrative name; pattern per NY AG complaint)"
+          }
+        },
+        {
+          "id": "northeast-wholesale",
+          "label": "Northeast Wholesale Pharmacy Inc",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "state": "NY",
+            "note": "Independent wholesaler (illustrative)"
+          }
+        },
+        {
+          "id": "agent-dover-de",
+          "label": "Registered agent \u2014 Dover, DE",
+          "type": "registered_agent",
+          "illustrative": true,
+          "details": {
+            "note": "Shared registered agent (illustrative)"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "buffalo-center-centers-health",
+          "to": "delaware-operations-assoc",
+          "type": "owned_by",
+          "label": "operated by"
+        },
+        {
+          "from": "delaware-operations-assoc",
+          "to": "centers-health-care",
+          "type": "owned_by",
+          "label": "owned by"
+        },
+        {
+          "from": "empire-clinical-supply",
+          "to": "centers-health-care",
+          "type": "owned_by",
+          "label": "owned by"
+        },
+        {
+          "from": "empire-clinical-supply",
+          "to": "agent-dover-de",
+          "type": "registered_agent",
+          "label": "registered agent"
+        },
+        {
+          "from": "delaware-operations-assoc",
+          "to": "agent-dover-de",
+          "type": "registered_agent",
+          "label": "registered agent"
+        }
+      ],
+      "notes": "Parent/operator from NY AG v. Centers Health Care (Nov 2023). Vendor LLC names are illustrative; production pulls CMS ownership (PECOS) + state SOS filings."
+    },
+    "accordius-rose-manor-portopiccolo": {
+      "nodes": [
+        {
+          "id": "accordius-rose-manor-portopiccolo",
+          "label": "Accordius Health at Rose Manor",
+          "type": "facility",
+          "illustrative": false,
+          "details": {
+            "state": "NC"
+          }
+        },
+        {
+          "id": "accordius-health",
+          "label": "Accordius Health (operating brand)",
+          "type": "operator",
+          "illustrative": false,
+          "details": {
+            "state": "NC"
+          }
+        },
+        {
+          "id": "portopiccolo-group",
+          "label": "Portopiccolo Group",
+          "type": "parent",
+          "illustrative": false,
+          "details": {
+            "state": "NJ",
+            "note": "PE owner per ProPublica (Nov 2020)"
+          }
+        },
+        {
+          "id": "carolina-senior-rx",
+          "label": "Carolina Senior Rx LLC",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "state": "NC",
+            "note": "Captive LTC pharmacy (illustrative name; captive-vendor pattern per ProPublica)"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "accordius-rose-manor-portopiccolo",
+          "to": "accordius-health",
+          "type": "owned_by",
+          "label": "operated by"
+        },
+        {
+          "from": "accordius-health",
+          "to": "portopiccolo-group",
+          "type": "owned_by",
+          "label": "owned by"
+        },
+        {
+          "from": "carolina-senior-rx",
+          "to": "portopiccolo-group",
+          "type": "owned_by",
+          "label": "owned by"
+        }
+      ],
+      "notes": "Parent from ProPublica Portopiccolo reporting (Nov 2020). Pharmacy name is illustrative."
+    },
+    "mi-casa-life-care-az": {
+      "nodes": [
+        {
+          "id": "mi-casa-life-care-az",
+          "label": "Mi Casa Nursing Center",
+          "type": "facility",
+          "illustrative": false,
+          "details": {
+            "state": "AZ"
+          }
+        },
+        {
+          "id": "life-care-centers",
+          "label": "Life Care Centers of America",
+          "type": "parent",
+          "illustrative": false,
+          "details": {
+            "state": "TN"
+          }
+        },
+        {
+          "id": "desert-sw-pharmacy",
+          "label": "Desert Southwest Pharmacy Services",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "state": "AZ",
+            "note": "Independent LTC pharmacy (illustrative)"
+          }
+        },
+        {
+          "id": "desert-sw-owner",
+          "label": "Independent owner",
+          "type": "parent",
+          "illustrative": true,
+          "details": {
+            "state": "AZ"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "mi-casa-life-care-az",
+          "to": "life-care-centers",
+          "type": "owned_by",
+          "label": "operated by"
+        },
+        {
+          "from": "desert-sw-pharmacy",
+          "to": "desert-sw-owner",
+          "type": "owned_by",
+          "label": "owned by"
+        }
+      ],
+      "notes": "No common ownership between facility and supplier. Supplier name is illustrative."
+    },
+    "crook-county-wy-rural": {
+      "nodes": [
+        {
+          "id": "crook-county-wy-rural",
+          "label": "Crook County Medical Services District LTC",
+          "type": "facility",
+          "illustrative": false,
+          "details": {
+            "state": "WY"
+          }
+        },
+        {
+          "id": "crook-county-msd",
+          "label": "Crook County Medical Services District",
+          "type": "parent",
+          "illustrative": false,
+          "details": {
+            "state": "WY",
+            "note": "County hospital district (non-profit)"
+          }
+        },
+        {
+          "id": "high-plains-medical",
+          "label": "High Plains Medical Distributors",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "state": "SD",
+            "note": "Regional distributor serving frontier WY (illustrative)"
+          }
+        },
+        {
+          "id": "high-plains-owner",
+          "label": "Independent owner",
+          "type": "parent",
+          "illustrative": true,
+          "details": {
+            "state": "SD"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "crook-county-wy-rural",
+          "to": "crook-county-msd",
+          "type": "owned_by",
+          "label": "operated by"
+        },
+        {
+          "from": "high-plains-medical",
+          "to": "high-plains-owner",
+          "type": "owned_by",
+          "label": "owned by"
+        }
+      ],
+      "notes": "Public district owner; independent regional supplier. Thin frontier market explains high unit prices."
+    },
+    "terraces-phoenix-humangood": {
+      "nodes": [
+        {
+          "id": "terraces-phoenix-humangood",
+          "label": "The Terraces of Phoenix",
+          "type": "facility",
+          "illustrative": false,
+          "details": {
+            "state": "AZ"
+          }
+        },
+        {
+          "id": "humangood-az",
+          "label": "HumanGood Arizona Inc",
+          "type": "operator",
+          "illustrative": false,
+          "details": {
+            "state": "AZ"
+          }
+        },
+        {
+          "id": "humangood",
+          "label": "HumanGood (non-profit)",
+          "type": "parent",
+          "illustrative": false,
+          "details": {
+            "state": "CA"
+          }
+        },
+        {
+          "id": "national-wholesaler",
+          "label": "National drug wholesaler",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "note": "Generic national wholesaler (illustrative)"
+          }
+        },
+        {
+          "id": "wholesaler-public",
+          "label": "Publicly traded parent",
+          "type": "parent",
+          "illustrative": true,
+          "details": {}
+        }
+      ],
+      "edges": [
+        {
+          "from": "terraces-phoenix-humangood",
+          "to": "humangood-az",
+          "type": "owned_by",
+          "label": "operated by"
+        },
+        {
+          "from": "humangood-az",
+          "to": "humangood",
+          "type": "owned_by",
+          "label": "owned by"
+        },
+        {
+          "from": "national-wholesaler",
+          "to": "wholesaler-public",
+          "type": "owned_by",
+          "label": "owned by"
+        }
+      ],
+      "notes": "No common ownership between facility and supplier."
+    },
+    "haven-health-green-valley": {
+      "nodes": [
+        {
+          "id": "haven-health-green-valley",
+          "label": "Haven Health Green Valley",
+          "type": "facility",
+          "illustrative": false,
+          "details": {
+            "state": "AZ"
+          }
+        },
+        {
+          "id": "haven-health",
+          "label": "Haven Health (regional AZ chain)",
+          "type": "parent",
+          "illustrative": false,
+          "details": {
+            "state": "AZ"
+          }
+        },
+        {
+          "id": "national-wholesaler",
+          "label": "National drug wholesaler",
+          "type": "supplier",
+          "illustrative": true,
+          "details": {
+            "note": "Generic national wholesaler (illustrative)"
+          }
+        },
+        {
+          "id": "wholesaler-public",
+          "label": "Publicly traded parent",
+          "type": "parent",
+          "illustrative": true,
+          "details": {}
+        }
+      ],
+      "edges": [
+        {
+          "from": "haven-health-green-valley",
+          "to": "haven-health",
+          "type": "owned_by",
+          "label": "operated by"
+        },
+        {
+          "from": "national-wholesaler",
+          "to": "wholesaler-public",
+          "type": "owned_by",
+          "label": "owned by"
+        }
+      ],
+      "notes": "No common ownership between facility and supplier."
+    }
+  }
+}

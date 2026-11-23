@@ -1,0 +1,591 @@
+{
+    "signals": [
+        {
+            "signal_id": "spend-ref_price_delta-terraces-phoenix-humangood-L002",
+            "pillar": "spend",
+            "signal_type": "ref_price_delta",
+            "facility_id": "terraces-phoenix-humangood",
+            "severity": "green",
+            "headline": "Jardiance (empagliflozin) 10 mg tablet invoiced at 1.1\u00d7 NADAC (+10%)",
+            "detail": "Supplier invoice INV-TERR-2602 (National drug wholesaler): $12.31/tablet vs CMS NADAC $11.19/tablet. 0 of 12 lines above 3\u00d7. Invoices feed the facility cost report (CMS Form 2540).",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "line_id": "L002",
+                "drug": "Jardiance (empagliflozin) 10 mg tablet",
+                "ndc": "00597015230",
+                "unit_price": 12.3067,
+                "reference_price": 11.1879,
+                "ratio": 1.1,
+                "supplier_id": "national-wholesaler",
+                "thresholds": {
+                    "red_above": 3.0,
+                    "yellow_from": 1.5
+                },
+                "reference": "CMS NADAC per unit, effective 2026-11-18",
+                "line_items": [
+                    {
+                        "line_id": "L001",
+                        "invoice_no": "INV-TERR-2601",
+                        "invoice_date": "2026-07-08",
+                        "drug": "Eliquis (apixaban) 5 mg tablet",
+                        "ndc": "00003089421",
+                        "unit": "tablet",
+                        "qty": 966,
+                        "unit_price": 5.7971,
+                        "total": 5600.0,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 5.521,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 1074,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L002",
+                        "invoice_no": "INV-TERR-2602",
+                        "invoice_date": "2026-07-22",
+                        "drug": "Jardiance (empagliflozin) 10 mg tablet",
+                        "ndc": "00597015230",
+                        "unit": "tablet",
+                        "qty": 274,
+                        "unit_price": 12.3067,
+                        "total": 3372.04,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 11.1879,
+                        "price_ratio": 1.1,
+                        "price_severity": "green",
+                        "expected_max_units": 322,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L003",
+                        "invoice_no": "INV-TERR-2603",
+                        "invoice_date": "2026-08-05",
+                        "drug": "Atorvastatin 40 mg tablet",
+                        "ndc": "82009017810",
+                        "unit": "tablet",
+                        "qty": 1691,
+                        "unit_price": 0.0367,
+                        "total": 62.06,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0367,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 1879,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L004",
+                        "invoice_no": "INV-TERR-2604",
+                        "invoice_date": "2026-08-19",
+                        "drug": "Lisinopril 10 mg tablet",
+                        "ndc": "82009006410",
+                        "unit": "tablet",
+                        "qty": 913,
+                        "unit_price": 0.0172,
+                        "total": 15.7,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0181,
+                        "price_ratio": 0.95,
+                        "price_severity": "green",
+                        "expected_max_units": 1074,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L005",
+                        "invoice_no": "INV-TERR-2605",
+                        "invoice_date": "2026-09-02",
+                        "drug": "Amlodipine 5 mg tablet",
+                        "ndc": "82009002710",
+                        "unit": "tablet",
+                        "qty": 1208,
+                        "unit_price": 0.0106,
+                        "total": 12.8,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0101,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 1342,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L006",
+                        "invoice_no": "INV-TERR-2606",
+                        "invoice_date": "2026-09-16",
+                        "drug": "Omeprazole DR 20 mg capsule",
+                        "ndc": "82009018310",
+                        "unit": "capsule",
+                        "qty": 1369,
+                        "unit_price": 0.0343,
+                        "total": 46.96,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0312,
+                        "price_ratio": 1.1,
+                        "price_severity": "green",
+                        "expected_max_units": 1611,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L007",
+                        "invoice_no": "INV-TERR-2607",
+                        "invoice_date": "2026-07-08",
+                        "drug": "Levothyroxine 50 mcg tablet",
+                        "ndc": "72603066102",
+                        "unit": "tablet",
+                        "qty": 870,
+                        "unit_price": 0.0425,
+                        "total": 36.98,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0425,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 966,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L008",
+                        "invoice_no": "INV-TERR-2608",
+                        "invoice_date": "2026-07-22",
+                        "drug": "Sertraline 50 mg tablet",
+                        "ndc": "82009004905",
+                        "unit": "tablet",
+                        "qty": 859,
+                        "unit_price": 0.0373,
+                        "total": 32.04,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0355,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 1074,
+                        "volume_ratio": 0.8,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L009",
+                        "invoice_no": "INV-TERR-2609",
+                        "invoice_date": "2026-08-05",
+                        "drug": "Donepezil 10 mg tablet",
+                        "ndc": "82009012005",
+                        "unit": "tablet",
+                        "qty": 966,
+                        "unit_price": 0.054,
+                        "total": 52.16,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0491,
+                        "price_ratio": 1.1,
+                        "price_severity": "green",
+                        "expected_max_units": 1074,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L010",
+                        "invoice_no": "INV-TERR-2610",
+                        "invoice_date": "2026-08-19",
+                        "drug": "Memantine 10 mg tablet",
+                        "ndc": "72603011902",
+                        "unit": "tablet",
+                        "qty": 1095,
+                        "unit_price": 0.0629,
+                        "total": 68.88,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0629,
+                        "price_ratio": 1.0,
+                        "price_severity": "green",
+                        "expected_max_units": 1289,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L011",
+                        "invoice_no": "INV-TERR-2611",
+                        "invoice_date": "2026-09-02",
+                        "drug": "Tamsulosin 0.4 mg capsule",
+                        "ndc": "82009002510",
+                        "unit": "capsule",
+                        "qty": 387,
+                        "unit_price": 0.05,
+                        "total": 19.35,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0476,
+                        "price_ratio": 1.05,
+                        "price_severity": "green",
+                        "expected_max_units": 430,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    },
+                    {
+                        "line_id": "L012",
+                        "invoice_no": "INV-TERR-2612",
+                        "invoice_date": "2026-09-16",
+                        "drug": "Acetaminophen 325 mg tablet",
+                        "ndc": "82568000103",
+                        "unit": "tablet",
+                        "qty": 9664,
+                        "unit_price": 0.0204,
+                        "total": 197.15,
+                        "supplier_id": "national-wholesaler",
+                        "supplier": "National drug wholesaler",
+                        "related_party_supplier": false,
+                        "reference_price": 0.0215,
+                        "price_ratio": 0.95,
+                        "price_severity": "green",
+                        "expected_max_units": 10738,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green"
+                    }
+                ]
+            },
+            "citation": {
+                "source": "CMS NADAC (National Average Drug Acquisition Cost) 2026",
+                "url": "https://data.medicaid.gov/dataset/fbb83258-11c7-47f5-8b18-5f8e79f7e704"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-ownership_overlap-terraces-phoenix-humangood",
+            "pillar": "spend",
+            "signal_type": "ownership_overlap",
+            "facility_id": "terraces-phoenix-humangood",
+            "severity": "green",
+            "headline": "No common ownership between facility and its suppliers",
+            "detail": "Suppliers checked: National drug wholesaler",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "hops": null,
+                "shared_node": null,
+                "path": [],
+                "supplier_id": "national-wholesaler",
+                "suppliers": [
+                    {
+                        "supplier_id": "national-wholesaler",
+                        "severity": "green",
+                        "hops": null,
+                        "shared_node": null,
+                        "path": [],
+                        "shared_registered_agents": []
+                    }
+                ],
+                "max_hops": 3,
+                "ownership_graph": {
+                    "nodes": [
+                        {
+                            "id": "terraces-phoenix-humangood",
+                            "label": "The Terraces of Phoenix",
+                            "type": "facility",
+                            "illustrative": false,
+                            "details": {
+                                "state": "AZ"
+                            }
+                        },
+                        {
+                            "id": "humangood-az",
+                            "label": "HumanGood Arizona Inc",
+                            "type": "operator",
+                            "illustrative": false,
+                            "details": {
+                                "state": "AZ"
+                            }
+                        },
+                        {
+                            "id": "humangood",
+                            "label": "HumanGood (non-profit)",
+                            "type": "parent",
+                            "illustrative": false,
+                            "details": {
+                                "state": "CA"
+                            }
+                        },
+                        {
+                            "id": "national-wholesaler",
+                            "label": "National drug wholesaler",
+                            "type": "supplier",
+                            "illustrative": true,
+                            "details": {
+                                "note": "Generic national wholesaler (illustrative)"
+                            }
+                        },
+                        {
+                            "id": "wholesaler-public",
+                            "label": "Publicly traded parent",
+                            "type": "parent",
+                            "illustrative": true,
+                            "details": {}
+                        }
+                    ],
+                    "edges": [
+                        {
+                            "from": "terraces-phoenix-humangood",
+                            "to": "humangood-az",
+                            "type": "owned_by",
+                            "label": "operated by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "humangood-az",
+                            "to": "humangood",
+                            "type": "owned_by",
+                            "label": "owned by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "national-wholesaler",
+                            "to": "wholesaler-public",
+                            "type": "owned_by",
+                            "label": "owned by",
+                            "related_party": false
+                        },
+                        {
+                            "from": "national-wholesaler",
+                            "to": "terraces-phoenix-humangood",
+                            "type": "supplies",
+                            "label": "invoiced $9,516 (Q3 2026)",
+                            "related_party": false
+                        }
+                    ],
+                    "notes": "No common ownership between facility and supplier."
+                }
+            },
+            "citation": {
+                "source": "CMS Nursing Home Compare \u2014 Provider Information dataset (Oct 2026)",
+                "url": "https://www.medicare.gov/care-compare/details/nursing-home/035003"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-volume_sanity-terraces-phoenix-humangood-L001",
+            "pillar": "spend",
+            "signal_type": "volume_sanity",
+            "facility_id": "terraces-phoenix-humangood",
+            "severity": "green",
+            "headline": "Eliquis (apixaban) 5 mg tablet: 966 billed vs ~1,074 expected (0.9\u00d7)",
+            "detail": "5,369 resident-days in 2026-Q3 (~59 residents). Assumes 10% of residents on this drug at 2 tablet/day.",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "drug": "Eliquis (apixaban) 5 mg tablet",
+                "line_id": "L001",
+                "billed_units": 966,
+                "expected_max": 1074,
+                "ratio": 0.9,
+                "resident_days": 5369,
+                "census_source": "placeholder: beds \u00d7 occupancy \u00d7 91 days (swap for PBJ resident-days from Dev B)",
+                "assumptions": {
+                    "share_of_residents": 0.1,
+                    "units_per_user_per_day": 2
+                },
+                "thresholds": {
+                    "red_above": 1.5,
+                    "yellow_from": 1.2
+                },
+                "rows": [
+                    {
+                        "line_id": "L001",
+                        "drug_id": "eliquis-5",
+                        "drug": "Eliquis (apixaban) 5 mg tablet",
+                        "billed_units": 966,
+                        "expected_max": 1074,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.1,
+                            "units_per_user_per_day": 2
+                        }
+                    },
+                    {
+                        "line_id": "L002",
+                        "drug_id": "jardiance-10",
+                        "drug": "Jardiance (empagliflozin) 10 mg tablet",
+                        "billed_units": 274,
+                        "expected_max": 322,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.06,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L003",
+                        "drug_id": "atorvastatin-40",
+                        "drug": "Atorvastatin 40 mg tablet",
+                        "billed_units": 1691,
+                        "expected_max": 1879,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.35,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L004",
+                        "drug_id": "lisinopril-10",
+                        "drug": "Lisinopril 10 mg tablet",
+                        "billed_units": 913,
+                        "expected_max": 1074,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L005",
+                        "drug_id": "amlodipine-5",
+                        "drug": "Amlodipine 5 mg tablet",
+                        "billed_units": 1208,
+                        "expected_max": 1342,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.25,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L006",
+                        "drug_id": "omeprazole-20",
+                        "drug": "Omeprazole DR 20 mg capsule",
+                        "billed_units": 1369,
+                        "expected_max": 1611,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.3,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L007",
+                        "drug_id": "levothyroxine-50",
+                        "drug": "Levothyroxine 50 mcg tablet",
+                        "billed_units": 870,
+                        "expected_max": 966,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.18,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L008",
+                        "drug_id": "sertraline-50",
+                        "drug": "Sertraline 50 mg tablet",
+                        "billed_units": 859,
+                        "expected_max": 1074,
+                        "volume_ratio": 0.8,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L009",
+                        "drug_id": "donepezil-10",
+                        "drug": "Donepezil 10 mg tablet",
+                        "billed_units": 966,
+                        "expected_max": 1074,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.2,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L010",
+                        "drug_id": "memantine-10",
+                        "drug": "Memantine 10 mg tablet",
+                        "billed_units": 1095,
+                        "expected_max": 1289,
+                        "volume_ratio": 0.85,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.12,
+                            "units_per_user_per_day": 2
+                        }
+                    },
+                    {
+                        "line_id": "L011",
+                        "drug_id": "tamsulosin-04",
+                        "drug": "Tamsulosin 0.4 mg capsule",
+                        "billed_units": 387,
+                        "expected_max": 430,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.08,
+                            "units_per_user_per_day": 1
+                        }
+                    },
+                    {
+                        "line_id": "L012",
+                        "drug_id": "acetaminophen-325",
+                        "drug": "Acetaminophen 325 mg tablet",
+                        "billed_units": 9664,
+                        "expected_max": 10738,
+                        "volume_ratio": 0.9,
+                        "volume_severity": "green",
+                        "assumptions": {
+                            "share_of_residents": 0.5,
+                            "units_per_user_per_day": 4
+                        }
+                    }
+                ]
+            },
+            "citation": {
+                "source": "CMS Payroll-Based Journal (resident-days; placeholder until PBJ pull)",
+                "url": "https://data.cms.gov/quality-of-care/payroll-based-journal-daily-nurse-staffing"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        },
+        {
+            "signal_id": "spend-spend_overall-terraces-phoenix-humangood",
+            "pillar": "spend",
+            "signal_type": "spend_overall",
+            "facility_id": "terraces-phoenix-humangood",
+            "severity": "green",
+            "headline": "SPEND: no procurement anomalies",
+            "detail": "Red only when price, ownership and volume all agree. Use this card for the facility roll-up.",
+            "data_provenance": "demo_grounded",
+            "evidence": {
+                "ref_price_delta": "green",
+                "ownership_overlap": "green",
+                "volume_sanity": "green"
+            },
+            "computed_at": "2026-11-23T01:35:44Z"
+        }
+    ]
+}

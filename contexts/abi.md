@@ -8,6 +8,36 @@ Role: **Dev A — Phantom Spend** (procurement fraud pillar), **backend-only**. 
 
 ---
 
+## Status — SPEND P0 backend is DONE (Nov 22, evening)
+
+**`GET :8003/spend/{facility_id}` is live, with 17 tests passing.** Saswata: you can build the SPEND tab now. Run instructions and the full response contract are in `apps/phantom-spend/README.md`. Can't run it? `apps/phantom-spend/samples/<facility_id>.json` are the exact responses.
+
+| Facility | price | ownership | volume | **spend_overall** |
+|---|---|---|---|---|
+| `buffalo-center-centers-health` | 🔴 insulin 4.2× NADAC | 🔴 shares owner Centers Health Care | 🔴 insulin 2.9× | 🔴 |
+| `accordius-rose-manor-portopiccolo` | 🔴 quetiapine 4.5× | 🔴 shares owner Portopiccolo | 🔴 quetiapine 2.4× | 🔴 |
+| `mi-casa-life-care-az` | 🟡 Januvia 1.6× | 🟢 | 🟢 | 🟡 |
+| `crook-county-wy-rural` | 🔴 insulin 3.2× (rural) | 🟢 | 🟢 | 🟡 ← rural check works |
+| `terraces-phoenix-humangood` | 🟢 | 🟢 | 🟢 | 🟢 |
+| `haven-health-green-valley` | 🟢 | 🟢 | 🟢 | 🟢 |
+
+### Progress log
+- **Real prices pulled:** 20 nursing-home drugs from **CMS NADAC 2026** (data.medicaid.gov API, effective 2026-11-18) → `data/spend/prices.json`. Unit-normalised (insulin per 10 mL vial, enoxaparin per 0.4 mL syringe). **Changed from plan: no CMS ASP**, which covers Part B injectables only; NADAC covers all 20 drugs. Example: insulin lispro $24.03/vial, Eliquis 5 mg $5.52/tablet.
+- **Demo data generated** by `scripts/build_demo_data.py` from per-facility settings, so numbers stay consistent: `line-items.json` (6 × 12 invoices, Q3 2026), `ownership-graphs.json` (real parents from facility citations, fictional vendor names flagged `illustrative: true`), `census.json` (placeholder resident-days + usage assumptions).
+- **Scoring** (`scoring.py`): 3 signals + `spend_overall`, thresholds as below.
+- **Cards + API** (`cards.py`, `main.py`): 4 schema-valid cards per facility; `GET /health`, `GET /spend`, `GET /spend/{id}`.
+- **Tests** (`test_scoring.py`): expected colours for all 6, every card validated against `packages/schemas/signal-card.schema.json`, graph drawable, 12 table rows, 404 on unknown id.
+- **Tested locally by Abi** via curl: output matches the table above.
+
+### What's next
+- [ ] Saswata: build the SPEND tab against the endpoint/samples; use `spend_overall` for the roll-up
+- [ ] Leo: send PBJ resident-days → I swap them into `census.json` and re-check colours
+- [ ] Optional: Cost Plus Drugs prices as a second reference column
+- [ ] P1: anchor card hashes via `packages/onchain-client`; cost-report CSV upload endpoint
+- [ ] Possible wording tweak: ownership headline says "3 hops", which could read "shares an owner"
+
+---
+
 ## Replies to `answers-to-abi.md` (decisions — Nov 22)
 
 ### 1. Real facility names with authored SPEND evidence: DEFERRED
@@ -42,21 +72,23 @@ Only the *reference* side is real (CMS ASP/NADAC prices, PBJ resident-days). The
 ### Architecture
 - **FastAPI service**, `apps/phantom-spend/`, port **8003**. Backend only.
 - **Static data, no live fetching at demo time.** Signals are computed on each request from JSON in `data/spend/`, so it's fast and survives bad WiFi.
-- **One-off Python script** pulls real CMS ASP + NADAC prices into `data/spend/prices.json`.
+- **One-off Python script** pulls real CMS NADAC prices into `data/spend/prices.json` (ASP dropped; see progress log).
 - **No chain anchoring at P0.** P1 option: `packages/onchain-client` → `commit(CLAIM_SIGNAL_CARD, hash)` per `HANDOFF.md`.
 - **Framing:** rows are **supplier → facility invoices that feed the cost report** (CMS Form 2540, Worksheet A-8-1), not Medicaid claim lines. Part A has no drug line items (see `02-fraud-research-brief.md`).
 
 ### Files
 ```
 apps/phantom-spend/
-  main.py                 ← FastAPI: GET /spend/{facility_id}, GET /health, CORS for :8000
+  main.py                 ← FastAPI: GET /health, GET /spend, GET /spend/{facility_id}; CORS open
   scoring.py              ← ref_price_delta, ownership_overlap, volume_sanity, spend_overall
   cards.py                ← builds schema-valid SignalCards
   test_scoring.py         ← expected colour per facility + schema validation
   requirements.txt
-  scripts/pull_prices.py  ← one-time: CMS ASP + NADAC → data/spend/prices.json
+  scripts/pull_prices.py  ← one-time: CMS NADAC → data/spend/prices.json
+  scripts/build_demo_data.py ← generates line-items / ownership-graphs / census from per-facility settings
+  samples/<id>.json       ← saved responses for the dashboard
 data/spend/
-  prices.json             ← ~20 drugs: ASP, NADAC, Cost Plus (real, source URL + date)
+  prices.json             ← 20 drugs: NADAC (real, source URL + effective date)
   line-items.json         ← 6 facilities × 12 invoice rows (authored)
   ownership-graphs.json   ← 6 graphs: nodes + edges + notes (authored, grounded in facility citations)
   census.json             ← resident-days per facility (placeholder → Leo's PBJ numbers)
@@ -99,7 +131,7 @@ data/spend/
 ### Scoring rules (thresholds from `apps/phantom-spend/README.md`)
 | Signal | Red | Yellow | Green |
 |---|---|---|---|
-| `ref_price_delta` | worst unit price > 3× ASP | 1.5–3× | < 1.5× |
+| `ref_price_delta` | worst unit price > 3× NADAC | 1.5–3× | < 1.5× |
 | `ownership_overlap` | supplier shares an ancestor with the facility within 3 hops | shared registered agent / address only | no overlap |
 | `volume_sanity` | billed > 1.5× expected max | 1.2–1.5× | ≤ 1.2× |
 | `spend_overall` | all 3 red | some red/yellow, not all 3 red | all green |
@@ -141,21 +173,21 @@ data/spend/
 ## Task checklist (mirrors Dev A in `saswata.md`, UI tasks moved to Dev C)
 
 ### P0 — Must ship
-- [ ] 1. CMS ASP quarterly file → lookup table for ~20 common SNF drugs
-- [ ] 2. NADAC (Socrata) for the same drugs, joined to the ASP table
-- [ ] 3. Hand-pull 10 Cost Plus Drugs prices
-- [ ] 4. Author line items: 6 facilities × 12 rows
-- [ ] 5. Author ownership graphs for 6 facilities
-- [ ] 6. Scoring: reference-price delta
-- [ ] 7. Scoring: ownership overlap
-- [ ] 8. Scoring: volume-vs-census
-- [ ] 12. Rural case: `crook-county-wy-rural` → `spend_overall` yellow
-- [ ] (new) `spend_overall` card + `GET /spend/{id}` returning schema-valid cards
+- [x] 1. ~~CMS ASP~~ → replaced by NADAC (ASP covers Part B injectables only)
+- [x] 2. NADAC for 20 drugs → `data/spend/prices.json`
+- [ ] 3. Hand-pull 10 Cost Plus Drugs prices (optional now)
+- [x] 4. Author line items: 6 facilities × 12 rows
+- [x] 5. Author ownership graphs for 6 facilities
+- [x] 6. Scoring: reference-price delta
+- [x] 7. Scoring: ownership overlap
+- [x] 8. Scoring: volume-vs-census
+- [x] 12. Rural case: `crook-county-wy-rural` → `spend_overall` yellow
+- [x] (new) `spend_overall` card + `GET /spend/{id}` returning schema-valid cards
 - ~~9–11. SPEND tab table, signal cards, vis-network graph~~ → **Dev C** (per `answers-to-abi.md`). I supply the data in `evidence`.
 
 ### P1 — Should ship
 - [ ] 13. Cost-report CSV upload (backend endpoint; Dev C hosts the widget)
-- [ ] 14. Citation on every card (built into the card builder)
+- [x] 14. Citation on every card (built into the card builder)
 - [ ] Anchor signal-card hashes via `packages/onchain-client`
 
 ### P2 — Stretch (cut first)
@@ -194,6 +226,8 @@ Procurement fraud, reference prices, PE nursing-home chains, PECOS / ownership o
 - (Nov 22) Price-gap, volume, ownership and overall cards are `data_provenance: "demo_grounded"`.
 - (Nov 22) Real-facility-names concern deferred for the demo.
 - (Nov 22) Rural safety case is `crook-county-wy-rural` (WY).
+- (Nov 22) Reference price = CMS NADAC only (dropped ASP).
+- (Nov 22) Demo data is generated from settings in `scripts/build_demo_data.py`, not hand-typed; edit the settings and re-run.
 
 ## TODO sections (for teammates to drop asks here)
 
