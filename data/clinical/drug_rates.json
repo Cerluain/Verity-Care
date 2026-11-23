@@ -19,14 +19,14 @@
     "display_name":          "Atorvastatin 40 mg (90 ct bottle)",
     "unit":                  "bottle",
     "rate_per_user_per_day": 0.011,
-    "ref_price_nadac":       31.80,
+    "ref_price_nadac":       15.20,
     "ndc":                   "0071-0157-23"
   },
   "lisinopril": {
     "display_name":          "Lisinopril 20 mg (1000 ct bottle)",
     "unit":                  "bottle",
     "rate_per_user_per_day": 0.001,
-    "ref_price_nadac":       62.40,
+    "ref_price_nadac":       11.40,
     "ndc":                   "0378-1110-01"
   },
   "donepezil": {
