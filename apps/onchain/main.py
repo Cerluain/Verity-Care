@@ -269,7 +269,33 @@ def list_commits(facility_id: Optional[str] = None, claim_type: Optional[int] = 
     if facility_id:
         rows = [r for r in rows if r.get("facility_id") in (None, facility_id) or r.get("facility_id") == facility_id]
     rows.sort(key=lambda r: r.get("committed_at") or "", reverse=True)
-    return rows[:limit]
+    rows = rows[:limit]
+
+    # Backfill block_number for any still-pending tx so the audit timeline
+    # doesn't stay "pending" forever. Only for live rows (not dummies).
+    if not MOCK and _w3 is not None:
+        for row in rows:
+            if row.get("block_number") or row.get("mocked"):
+                continue
+            tx = row.get("tx_hash")
+            if not tx or not tx.startswith("0x") or len(tx) != 66:
+                continue
+            try:
+                receipt = _w3.eth.get_transaction_receipt(tx)
+            except Exception:
+                continue  # not mined yet
+            event = _event_from_receipt(receipt, tx)
+            if event and event.get("block_number"):
+                row["block_number"] = event["block_number"]
+                row["block_timestamp"] = event.get("block_timestamp")
+                try:
+                    if db.enabled():
+                        db.update_block_number(tx, event["block_number"],
+                                               event.get("signer_role"),
+                                               event.get("signer_address"))
+                except Exception:
+                    pass
+    return rows
 
 
 _CASEFILE_HISTORY_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "demo" / "casefile-history"
