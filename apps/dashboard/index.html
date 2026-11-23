@@ -261,17 +261,16 @@
                 <!-- Open-data provenance: each number has a verifiable source. -->
                 <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span class="uppercase tracking-wider text-slate-400">sources</span>
-                  <a :href="'https://data.medicaid.gov/dataset/nadac-national-average-drug-acquisition-cost#d=%7B%22query%22%3A%22' + encodeURIComponent(t.display_name) + '%22%7D'"
-                     target="_blank" class="text-blue-600 hover:underline">CMS NADAC ↗</a>
                   <template x-if="t.ndc">
                     <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.ndc)"
-                       target="_blank" class="text-blue-600 hover:underline">DailyMed label ↗</a>
+                       target="_blank" class="text-blue-600 hover:underline font-medium">DailyMed label ↗</a>
                   </template>
-                  <template x-if="t.ndc">
-                    <a :href="'https://api.fda.gov/drug/ndc.json?search=product_ndc:%22' + encodeURIComponent(t.ndc) + '%22'"
-                       target="_blank" class="text-blue-600 hover:underline">FDA NDC ↗</a>
-                  </template>
-                  <a href="https://openpaymentsdata.cms.gov/" target="_blank" class="text-blue-600 hover:underline">OpenPayments ↗</a>
+                  <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.display_name)"
+                     target="_blank" class="text-blue-600 hover:underline">search by name ↗</a>
+                  <a href="https://data.medicaid.gov/dataset/dfa2ab14-06c2-457a-9e36-5cb6d80f8d93"
+                     target="_blank" class="text-blue-600 hover:underline">CMS NADAC dataset ↗</a>
+                  <a href="https://openpaymentsdata.cms.gov/"
+                     target="_blank" class="text-blue-600 hover:underline">OpenPayments ↗</a>
                   <span class="text-slate-400">· NDC <span class="mono" x-text="t.ndc || '—'"></span></span>
                 </div>
               </article>
@@ -471,7 +470,9 @@
       </template>
 
       <template x-if="selected && activeTab === 'case file'">
-        <div class="space-y-5">
+        <div class="space-y-5"
+             x-init="loadSnapshotCards(); loadDrugDisparity(); loadGuardianReports(); loadCaseFileHistory()"
+             x-effect="selected; loadSnapshotCards(); loadDrugDisparity(); loadGuardianReports(); loadCaseFileHistory()">
           <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -504,21 +505,26 @@
               </div>
             </div>
 
-            <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+            <div class="mt-4 grid grid-cols-4 gap-4 text-sm">
               <div>
-                <div class="text-xs text-slate-500 uppercase tracking-wider">SPEND signals</div>
-                <div class="text-2xl font-semibold" x-text="(spend.signals || []).length"></div>
-                <div class="text-xs text-slate-500" x-text="(spend.signals || []).filter(c => c.severity === 'red').length + ' red · ' + (spend.signals || []).filter(c => c.chain_commit && c.chain_commit.block_number).length + ' anchored'"></div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">inventory anchors</div>
+                <div class="text-2xl font-semibold" x-text="snapshotCards.length"></div>
+                <div class="text-xs text-slate-500" x-text="snapshotCards.filter(s => s.block_number && !s.mocked).length + ' on-chain (facility)'"></div>
               </div>
               <div>
-                <div class="text-xs text-slate-500 uppercase tracking-wider">SHIFT signals</div>
-                <div class="text-2xl font-semibold" x-text="shiftSignals.length"></div>
-                <div class="text-xs text-slate-500" x-text="shiftSignals.filter(c => c.chain_commit && c.chain_commit.block_number).length + ' anchored'"></div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">phantom spend</div>
+                <div class="text-2xl font-semibold" x-text="drug.data?.roll_up ? ('$' + (drug.data.roll_up.combined_phantom_spend || 0).toLocaleString('en-US',{maximumFractionDigits:0})) : '—'"></div>
+                <div class="text-xs text-slate-500" x-text="drug.data?.roll_up ? ((drug.data?.tiles || []).filter(t => t.severity === 'red').length + ' red · ' + (drug.data?.tiles || []).filter(t => t.severity === 'yellow').length + ' yellow') : 'no snapshot yet'"></div>
               </div>
               <div>
-                <div class="text-xs text-slate-500 uppercase tracking-wider">Delivery proofs</div>
-                <div class="text-2xl font-semibold" x-text="pos.deliveries.length"></div>
-                <div class="text-xs text-slate-500" x-text="pos.deliveries.filter(d => d.block_number && !d.mocked).length + ' on Base Sepolia'"></div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">guardian flags</div>
+                <div class="text-2xl font-semibold" x-text="guardianReports.length"></div>
+                <div class="text-xs text-slate-500" x-text="guardianReports.filter(r => (r.kind||'')==='dispute').length + ' disputed · ' + guardianReports.filter(r => (r.kind||'')==='delayed').length + ' delayed'"></div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500 uppercase tracking-wider">prior sign-offs</div>
+                <div class="text-2xl font-semibold" x-text="caseFileHistory.length"></div>
+                <div class="text-xs text-slate-500" x-text="caseFileHistory.length ? ('last ' + relativeTime(caseFileHistory[0].committed_at)) : 'first review'"></div>
               </div>
             </div>
           </div>

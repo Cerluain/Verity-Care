@@ -477,9 +477,12 @@ def verify(claim_hash: Optional[str] = None, claim_type: Optional[int] = None):
             if event and event.get("block_number"):
                 row["block_number"] = event["block_number"]
                 row["block_timestamp"] = event.get("block_timestamp")
+                # Persist to Postgres so the next /verify is pure DB read.
                 try:
-                    db.update_block_number(tx, event["block_number"],
-                                           event.get("signer_role"), event.get("signer_address"))
+                    if db.enabled():
+                        db.update_block_number(tx, event["block_number"],
+                                               event.get("signer_role"),
+                                               event.get("signer_address"))
                 except Exception:
                     pass
 
