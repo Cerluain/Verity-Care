@@ -317,4 +317,83 @@ Push the updated samples so the dashboard has them for a full-offline demo path.
 
 - Do NOT add a wallet, do NOT touch private keys, do NOT install web3.py. The onchain service handles all of that.
 - Do NOT add chain signing for the invoice-upload widget on the facility intake page — that lands on me (Dev C) since I own that page.
-- Do NOT batch-commit across cards. One commit per card is the right shape — judges get a Basescan link per signal. Gas cost is negligible on Base Sepolia.
+
+## TODO from Saswata — PROOF-OF-SERVICE tab UI (chain + IPFS are live, backend is done)
+
+### Context — what we agreed on with you
+
+Replacing the Voice pillar. Staff member delivers a specific thing to a specific patient (meal tray, insulin dose, PT visit, wound dressing), opens the app, snaps a photo, submits. The backend:
+
+1. Pins the image to IPFS (Pinata), gets `image_cid`
+2. Builds a metadata JSON with that `image_cid` + facility/patient/service details
+3. Pins the metadata to IPFS, gets `metadata_cid`
+4. Computes `sha256(canonical(metadata))` = `claim_hash`
+5. Calls `commit(claim_type=5, claim_hash)` signed by the **staff wallet** (`0xdbbF6AF9F46E85ee39c2448bc807A51cfc4d497B`)
+
+Verifier can refetch metadata from any IPFS gateway, recompute the hash, and confirm it matches what's on-chain. Walmart-receipt-photo pattern, done properly with content-addressing.
+
+Note on contract: we redeployed. New VerityCommit lives at `0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb` (old `0xF806…` is dead). Everything in `shared.env.example` already references the new address.
+
+### [ ] TODO 1 — Build the Proof-of-Service tab UI (P0, backend already works)
+
+The dashboard already has a "proof of service" tab registered (replaces the old "voice" tab). The placeholder is at `apps/dashboard/index.html` inside the `activeTab === 'proof of service'` template.
+
+Everything you need to build is UI. The backend is live:
+
+- **POST /delivery** (multipart form) — upload a photo + record a delivery. Form fields: `facility_id`, `patient_pseudonym`, `service_type`, `service_detail`, `staff_pseudonym`, optional `delivered_at` (ISO), `image` (file). Returns JSON with `tx_hash`, `claim_hash`, `metadata_cid`, `image_cid`, `signer_role: "staff"`, `signer_address`, `explorer_url`, `image_url` (Pinata gateway), `metadata_url`.
+- **GET /deliveries?facility_id=…** — list all proofs for a facility (newest first). Same shape as POST response.
+
+Both are proxied by the dashboard at `/delivery` and `/deliveries` — hit those from the browser, no CORS fuss.
+
+Suggested UI for the tab:
+
+1. **Upload widget** at the top: file input + the 4 text fields (patient, service_type, service_detail, staff_pseudonym) + submit button. Service type is a dropdown: `meal | insulin | medication | visit | wound_dressing | pt_session`. On submit, POST multipart to `/delivery`. On success, prepend the returned record to the list below.
+2. **Grid of proof cards** below (2-3 per row): each card shows the image (from `image_url`), service type + detail, patient pseudonym, timestamp, staff pseudonym, and a chain footer row with the same state machine the SPEND cards have — pending (yellow) → confirmed (green + block number) → with a Basescan link + "verify" button.
+3. **Verify button** fetches `/chain/{tx_hash}` (dashboard already proxies) and shows block number + signer address + source. Same pattern as SPEND verify.
+4. **IPFS links** — next to the image, show a small "view on IPFS ↗" link to `image_url`, and "metadata ↗" to `metadata_url`. Click to open Pinata gateway in a new tab.
+
+### [ ] TODO 2 — Verification affordance for the pitch (P0, ~15 min)
+
+For each proof card, add a small "verify hash" button that:
+
+1. Fetches `metadata_url` (the raw JSON from IPFS)
+2. Computes `sha256(canonical(metadata))` in the browser using `crypto.subtle.digest` (the same `canonicalHash` helper the SPEND tab uses — see `dashboard()` fn around line 310)
+3. Compares to the `claim_hash` returned from `/delivery` and shown on the card
+4. Flashes "✓ matches on-chain hash" (green) or "✗ MISMATCH" (red)
+
+**This is the pitch moment.** When a judge asks "how do I know the photo wasn't swapped," you click this button. The browser independently refetches from IPFS, independently recomputes the hash, and the UI proves the match. Nothing trusts our backend — trust is derived from re-execution.
+
+### Non-goals for you on Proof-of-Service
+
+- Do NOT handle the Pinata JWT. If it's missing, the backend falls back to `bafkmock…` deterministic CIDs so the UI builds without an account. Judges will see `pin_mode: "mock"` in the response — fine for now.
+- Do NOT handle image compression or resizing. Pinata takes anything up to a few MB; our 1x1-pixel smoke-test shows the pipeline works on anything.
+- Do NOT touch the staff wallet or any private key — all signing is in `apps/onchain`.
+
+### Smoke-test it worked (run before styling)
+
+```bash
+# 1. Make sure the onchain service is running on 8001 and the dashboard on 8000
+curl -s http://localhost:8001/health | python3 -m json.tool  # should show 4 signers incl. "staff"
+
+# 2. Upload a test image via curl
+curl -X POST http://localhost:8000/delivery \
+  -F "facility_id=buffalo-center-centers-health" \
+  -F "patient_pseudonym=patient-A17" \
+  -F "service_type=insulin" \
+  -F "service_detail=humalog 10u" \
+  -F "staff_pseudonym=staff-003" \
+  -F "image=@/path/to/any/photo.png" | python3 -m json.tool
+
+# 3. List deliveries for that facility
+curl -s "http://localhost:8000/deliveries?facility_id=buffalo-center-centers-health" | python3 -m json.tool
+```
+
+If #1 and #2 both return 200 with a `tx_hash` + `metadata_cid`, backend is good. The pitch-ready story: `tx_hash` → Basescan proves staff wallet signed it at a specific block time; `metadata_cid` → IPFS gateway proves you can refetch and rehash; the two tie together because the on-chain `claim_hash` equals `sha256(canonical(metadata))`.
+
+### What Saswata already shipped on this
+
+- VerityCommit redeployed with claim_type range extended to 1..5 at `0x7aa14919C7b2d127F755E048682a6f5A1b57Fcdb`
+- Staff signer wallet funded (0.001 ETH)
+- `apps/onchain /delivery` + `/deliveries` endpoints live, smoke-tested with a 1×1 PNG: real tx on Base Sepolia block 62402565, hash round-trip verified byte-for-byte
+- Dashboard `/delivery` + `/deliveries` proxies live so browser hits one origin
+- Proof-of-service tab replaces Voice in the dashboard tab list + placeholder note points to these endpoints
