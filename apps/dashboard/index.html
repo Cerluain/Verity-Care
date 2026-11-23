@@ -265,7 +265,7 @@
                     <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.ndc)"
                        target="_blank" class="text-blue-600 hover:underline font-medium">DailyMed label ↗</a>
                   </template>
-                  <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.display_name)"
+                  <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.search_name || t.display_name)"
                      target="_blank" class="text-blue-600 hover:underline">search by name ↗</a>
                   <a href="https://data.medicaid.gov/dataset/dfa2ab14-06c2-457a-9e36-5cb6d80f8d93"
                      target="_blank" class="text-blue-600 hover:underline">CMS NADAC dataset ↗</a>

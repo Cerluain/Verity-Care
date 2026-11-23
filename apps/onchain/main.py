@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import re
 import json
 import os
 import threading
@@ -1163,9 +1164,18 @@ def drug_disparity(facility_id: str):
             total_excess_spend += excess_spend
         total_markup_overpay += max(markup_overpay, 0)
 
+        # Clean search_name for DailyMed: drop everything after (and including)
+        # the first dose/packaging token so the lookup hits (e.g. 'Insulin lispro
+        # 10 mL vial' → 'Insulin lispro'; 'Metformin HCl 500 mg (1000 ct bottle)'
+        # → 'Metformin HCl'). DailyMed is strict — any extra word kills the match.
+        raw_name = rate_info.get("display_name", drug)
+        search_name = re.split(r"\s+\d|\s+\(", raw_name, maxsplit=1)[0].strip()
+        if not search_name:
+            search_name = raw_name
         tiles.append({
             "drug":                drug,
-            "display_name":        rate_info.get("display_name", drug),
+            "display_name":        raw_name,
+            "search_name":         search_name,
             "unit":                rate_info.get("unit", "unit"),
             "ndc":                 rate_info.get("ndc"),
             "severity":            severity,
