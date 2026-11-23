@@ -103,7 +103,9 @@
 
       <!-- SPENDING -->
       <template x-if="selected && activeTab === 'spending'">
-        <div x-init="loadDrugDisparity(); loadSnapshotCards()" x-effect="selected; loadDrugDisparity(); loadSnapshotCards()">
+        <div x-init="loadDrugDisparity(); loadSnapshotCards(); startSpendPoll()"
+             x-effect="selected; loadDrugDisparity(); loadSnapshotCards()"
+             @click="loadDrugDisparity(); loadSnapshotCards()">
           <!-- Single unified view: drug-level disparity. The 3-signal fraud view
                used to live behind a toggle; it's now folded into the per-drug
                tiles below (price gap, volume vs clinical demand, markup). -->
@@ -774,6 +776,19 @@ function dashboard() {
         // Newest first → chronological left-to-right for the pitch narrative.
         this.snapshotCards = rows.slice().sort((a,b) => (a.period||'').localeCompare(b.period||''));
       } catch(_) { this.snapshotCards = []; }
+    },
+
+    // Auto-refresh SPENDING data every 10s so a fresh /facility upload lands
+    // in the investigator view without manual click. Idempotent — only one
+    // interval alive at a time per app instance.
+    startSpendPoll() {
+      if (this._spendPoll) return;
+      this._spendPoll = setInterval(() => {
+        if (this.activeTab === 'spending' && this.selected) {
+          this.loadSnapshotCards();
+          this.loadDrugDisparity();
+        }
+      }, 10000);
     },
 
     visibleTabs() {
