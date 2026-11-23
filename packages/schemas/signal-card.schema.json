@@ -3,7 +3,7 @@
   "title": "SignalCard",
   "description": "A single fraud-signal card. Every pillar (spend/shift/voice) produces these. Dashboard renders them.",
   "type": "object",
-  "required": ["signal_id", "pillar", "signal_type", "severity", "headline", "computed_at"],
+  "required": ["signal_id", "pillar", "signal_type", "severity", "headline", "computed_at", "data_provenance"],
   "properties": {
     "signal_id": {
       "type": "string",
@@ -23,6 +23,10 @@
     "detail": {
       "type": "string",
       "description": "Optional multi-line human detail, rendered on card expand."
+    },
+    "data_provenance": {
+      "enum": ["real", "demo_grounded", "synthetic"],
+      "description": "real = pulled from a public API this session (e.g. CMS ASP, NADAC). demo_grounded = hand-authored on a documented real-world pattern (e.g. ProPublica Portopiccolo). synthetic = fully invented for shape/UX only. Dashboard renders a tooltip badge from this. REQUIRED on every card."
     },
     "evidence": {
       "type": "object",

@@ -33,7 +33,22 @@ Citation: CMS ASP Q3 2026 file + NDC URL.
 Input: facility_id, supplier_llc.
 Walks the hand-authored graph under `/data/spend/ownership-graphs.json`.
 Returns red if shared ancestor within 3 hops.
-**MUST** have UI tooltip labeling the graph as demo-data grounded in ProPublica Portopiccolo / Centers Health Care.
+
+**Rendering split (clarifies earlier contradiction):**
+- Abhi (this service) returns the graph JSON inside `evidence.ownership_graph` on the signal card. Shape: `{ nodes: [...], edges: [...], notes: "..." }`.
+- Dev C's dashboard renders the vis-network from that JSON. All visualization code lives in `apps/dashboard/`; Abhi stays backend-only.
+- Abhi sets `data_provenance: "demo_grounded"` on the signal card. The dashboard auto-renders a tooltip badge + ProPublica citation from that field. Abhi doesn't hand-build the tooltip.
+
+## Overall facility colour
+
+Abhi returns **per-signal severity only**. The dashboard computes `aggregate_severity` for the left-rail facility badge using:
+- red if any pillar has a red signal
+- yellow if any pillar has a yellow signal and no reds
+- green otherwise
+
+## Phoenix Memory Care — scenario correction
+
+Phoenix Memory Care's `scenario_tag` is `worthless_services`, which is a service-delivery problem, not a procurement problem. On SPEND it should look **mostly clean or yellow** (maybe one modest markup, no ownership overlap). The red flag for Phoenix lands on **VOICE** (residents saying services weren't delivered) and lightly on **SHIFT** (under-visited dementia residents). Dev C owns that mapping on the VOICE side.
 
 ## Volume-vs-census signal
 
