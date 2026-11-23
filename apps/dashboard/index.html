@@ -185,6 +185,8 @@
                       </div>
                       <div class="text-slate-600 truncate" x-text="s.supplier || '—'"></div>
                       <div class="text-slate-500 mono" x-text="'$' + (s.receipt_total || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})"></div>
+                      <div class="text-[10px] text-slate-400 uppercase tracking-wider pt-0.5">anchored</div>
+                      <div class="text-[11px] text-slate-600" x-text="formatTime(s.committed_at) || '—'"></div>
                       <div class="pt-1 flex items-center gap-2 text-[11px]">
                         <template x-if="s.explorer_url">
                           <a :href="s.explorer_url" target="_blank" class="text-blue-600 hover:underline">Basescan ↗</a>
@@ -271,7 +273,6 @@
                   <span class="uppercase tracking-wider text-slate-400">source</span>
                   <a :href="'https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=' + encodeURIComponent(t.search_name || t.display_name)"
                      target="_blank" class="text-blue-600 hover:underline font-medium">View FDA label ↗</a>
-                  <span class="text-slate-400">· NDC <span class="mono" x-text="t.ndc || '—'"></span></span>
                 </div>
               </article>
             </template>
