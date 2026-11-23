@@ -46,3 +46,6 @@ Thumbs.db
 
 # Guardian live captures (photos) — never commit
 data/care/runtime/
+
+# Onchain local JSONL log + rotated .bak files
+apps/onchain/data/
