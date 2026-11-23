@@ -1,107 +1,70 @@
-# System Design Document: Elder Care Integrity Platform (Hackathon MVP & Scale Roadmap)
+# Leo — context
 
-## 1. Executive Summary
+GitHub: Cerluain. Role: **Dev B — Phantom Shift** (staffing fraud pillar).
 
-Government-funded elder care across Medicare, Medicare Advantage, and state Medicaid programs (such as Arizona's AHCCCS/ALTCS) suffers from three distinct, high-impact fraud and financial abuse vectors:
+## What I own in this project
 
-1. **Ghost Jobs & Phantom Staffing:** Facilities falsify Payroll-Based Journal (PBJ) hours or use "tap-and-leave" badge schemes to inflate CMS Five-Star ratings and satisfy minimum staffing mandates while leaving care floors dangerously understaffed.
-2. **Related-Party Cost Markups:** Parent organizations tunnel an estimated 63% to 68% of true facility profits into affiliated shell LLCs (real estate, management, therapy, medical supplies) via inflated transfer prices, making facilities appear unprofitable on cost reports to lobby for higher reimbursement rates.
-3. **Phantom Care & Undelivered Items:** Unbundled ancillary providers (Durable Medical Equipment suppliers, visiting therapists, mobile clinics, and home health agencies) bill Medicare or Medicaid for items and visits never delivered to beneficiaries.
+The SHIFT pillar end to end: PBJ baseline data, synthetic nurse rosters/schedules/AZ Board of Nursing suspensions, spatial-temporal & credential scoring functions, SHIFT-tab UI components, and the `/live-tap` NFC capture pipeline built on top of Saswata's Base Sepolia `commit` helper (`VerityCommit.sol`). Task list mirrors Dev B in `saswata.md`.
 
-Current oversight relies on **post-hoc self-reported filings** and understaffed reactive audits. This design document defines a unified **Eldercare Integrity Platform** built around a 7-hour hackathon MVP architecture and a phased commercial rollout, retaining only mechanisms that score average or higher on operational usability, data reliability, privacy preservation, and legal feasibility.
+### P0 — Must ship
+- [ ] 1. Pull real PBJ CSV from `data.cms.gov` → extract resident-day counts and CCNs for the 6 facilities — **start first (unblocks Abi's Signal 3)**
+- [ ] 2. Author nurse roster: 40 nurses × 6 facilities (`AZ-RN` license format, hire date, role)
+- [ ] 3. Author 30-day shift schedule per facility with 3 cross-facility collisions and 2 post-suspension shifts baked in
+- [ ] 4. Author synthetic AZ Board of Nursing registry with 2 suspension events on specific dates
+- [ ] 5. Author door geometry for 1 facility: 5 coordinates (feet from origin) for `Entrance`, `Med Room`, `Wing C`, `Supply Closet`, and `Memory Care`
+- [ ] 6. Scoring: cross-facility license collision (overlapping shift hours for same license across facilities)
+- [ ] 7. Scoring: credential validity at shift time (shift date vs. board suspension date)
+- [ ] 8. Scoring: impossible-travel ($d(\text{Door}_A, \text{Door}_B) / \Delta t > v_{\max}$ across consecutive taps)
+- [ ] 9. SHIFT tab: top summary card with `Claimed HPRD → Adjusted HPRD` breakdown after stripping ghost/suspended hours
+- [ ] 10. SHIFT tab: `vis-network` license-collision force graph (nurses ↔ facilities)
+- [ ] 11. SHIFT tab: suspended-license table with timeline
+- [ ] 12. Build `POST /live-tap` endpoint receiving NFC tap events from phones
+- [ ] 13. Configure phones (Android HTTP POST automation or iPhone Shortcuts on NTAG215 stickers) and test hitting `/live-tap` before H4
+- [ ] 14. Build live tap panel in SHIFT tab animating the nurse's floor path in real time
+- [ ] 15. Rehearse live tap demo 3× in the venue room (verify WiFi + phone-to-endpoint reachability)
 
----
+### P1 — Should ship
+- [ ] 16. Wire Saswata's `commit(claimType, claimHash) → txHash` helper inside `/live-tap` so every NFC tap is anchored on Base Sepolia at capture time with a clickable tx hash
+- [ ] 17. Drop live-tap feed widget into the facility intake console (`facility.html`)
+- [ ] 18. Lock two-phone cross-facility collision rehearsal and sticker layout
 
-## 2. Solution Filtering & Viability Matrix
+### P2 — Stretch (cut first)
+- [ ] 19. Live impossible-travel trigger during stage demo (requires physical NFC stickers in room)
+- [ ] 20. Role-misclassification signal using acuity-vs-staffing anomaly
 
-Lower-viability concepts identified during discovery were filtered out in favor of mechanisms with higher data reliability and lower deployment friction:
+## Q&A I own
 
-| Fraud Domain | Discarded / Low-Viability Approaches | Retained High-Viability Approaches | Core Design Rationale |
-| :--- | :--- | :--- | :--- |
-| **Ghost Jobs & Staffing** | Physical RFID keycards (easily cloned or left at the front desk for managers to tap); raw GPS/camera employee surveillance (violates worker privacy and faces union pushback). | **Hardware-Anchored Mobile NFC + Zero-Knowledge Proofs (ZKPs):** Smartphone Secure Enclave keys paired with biometric unlock, multi-zone door taps, and Poseidon nullifiers. | Proves distinct licensed staff worked full shifts across multiple building zones without exposing employee PII, wages, or exact movement trails. |
-| **Related-Party Cost Markups** | Manual forensic audits of every sister LLC's private tax returns; requiring small independent homes to overhaul accounting systems overnight. | **GPO Reference-Pricing Caps + Beneficial Ownership Cross-Referencing:** Capping allowable supply costs at Group Purchasing Organization (GPO) benchmarks and flagging shared LLC owners/registered agents. | Uses existing CMS "Prudent Buyer" legal authority (42 CFR 413.17) to disallow markups automatically without needing access to shell company bank accounts. |
-| **Phantom Care & Undelivered Items** | Calling nursing home residents directly (42% to 58% have dementia/cognitive impairment, lack personal phones, or fear staff retaliation). | **Healthcare Proxy / Family POA Verification + Home Health Targeting:** Automated SMS/voice checks sent to the resident's designated Healthcare Proxy triggered by high-risk Medicare Part B / DMEPOS claims. | Family caregivers review bills without cognitive barriers or fear of retaliation; direct beneficiary calls are reserved for cognitively independent in-home care recipients. |
+- **2024 CMS minimum staffing rule:** Rescinded effective Feb 2, 2026 via CMS Interim Final Rule (leaving state staffing floors, enhanced facility assessments, and Care Compare Five-Star staffing ratings as the primary accountability levers).
+- **PBJ limitations:** Quarterly, self-reported, uses facility-local IDs (missing cross-facility RN license collisions), and doesn't cross-check state nursing board suspension dates in real time (June 2026 HHS-OIG audit A-09-24-02005 found 45% of sampled RNs had unsupported PBJ hours).
+- **"Nursing homes already use NFC badges — what's new?":** Legacy readers log locally in mutable facility databases and miss badge handoffs at a single desk; Verity Care enforces multi-door physical travel bounds and anchors every tap hash to Base Sepolia at capture time so facilities cannot retroactively edit shift logs.
 
----
+## What I do NOT own
 
-## 3. Hackathon MVP Architecture (7-Hour Sprint Scope)
+- Dashboard shell (`index.html`), intake console shell (`facility.html`), tab routing, shared schemas, Base Sepolia `VerityCommit.sol` contract/helper, Voice, and Case File aggregation (Saswata / Dev C).
+- SPEND pillar (Abi / Dev A).
+- Zero-Knowledge circuits (cut per team decision — trajectory invariants run in plain code with a roadmap asterisk).
 
-For the 12-hour hackathon demo, all three tracks integrate into a single **Eldercare Integrity Dashboard** monitoring a simulated facility (**Sunset Pines Care Facility #402**, 30 residents, minimum requirement of 5 licensed nurses per shift).
+## Dependencies on others (and what others need from me)
 
-```
-+-----------------------------------------------------------------------------------+
-|                        ELDERCARE INTEGRITY DASHBOARD (React)                      |
-|  [ Tab 1: Floor ZKP Staffing ]   [ Tab 2: Family Proxy ]   [ Tab 3: Cost X-Ray ]  |
-+----------------+-----------------------------+------------------------------------+
-                 |                             |
-     +-----------v-----------+     +-----------v-----------+     +------------------+
-     |   Noir / Barretenberg |     |  Twilio SMS / Voice   |     |  GPO Benchmark & |
-     |   ZK Prover & Verifier|     |  Webhook Engine       |     |  LLC Graph Engine|
-     +-----------------------+     +-----------------------+     +------------------+
-```
+- **Saswata (Dev C):** `facilities.json` + `signal-card.schema.json` (task 4), dashboard shells (tasks 5–8), and the `commit(claimType, claimHash) → txHash` helper (task 3, due end of H1) so `/live-tap` can anchor taps on Base Sepolia.
+- **Abi (Dev A) depends on me:** Needs my Task 1 PBJ resident-day counts + facility CCNs to compute Signal 3 (`volume_sanity`).
 
-### Track 1: Ghost-Job ZKP Verification Pipeline (Primary Cryptographic Engine)
-* **Stack:** Noir (`nargo`) + Barretenberg (`bb`) backend wrapped in a lightweight FastAPI endpoint (or `@noir-lang/noir_js` WASM), connected to a split-screen React UI.
-* **Circuit Inputs (`main.nr`):**
-  * **Private Witnesses (Never leave facility machine):**
-    * `worker_secrets: [Field; 5]` (simulated smartphone Secure Enclave keys)
-    * `door_ids: [[Field; 2]; 5]` (NFC hardware anchor IDs tapped during shift)
-    * `timestamps: [[u64; 2]; 5]` (Unix timestamps of start and mid/end taps)
-  * **Public Inputs (Visible to State Auditor):**
-    * `shift_id: pub Field`
-    * `min_shift_seconds: pub u64` (e.g., `25200` seconds for 7 hours)
-    * `claimed_nullifiers: pub [Field; 5]`
-* **Circuit Constraints:**
-  1. **Cryptographic Uniqueness (Anti-Double-Counting):** For each nurse $i \in \{0..4\}$, verify $\text{claimed\_nullifiers}[i] = \text{Poseidon}(\text{worker\_secrets}[i], \text{shift\_id})$, and assert $\text{claimed\_nullifiers}[i] \neq \text{claimed\_nullifiers}[j]$ for all $i \neq j$.
-  2. **Spatial Liveness (Anti-Front-Desk Tap):** Assert $\text{door\_ids}[i][0] \neq \text{door\_ids}[i][1]$, proving each worker authenticated across at least two physically separate building zones (e.g., `Wing_A_MedRoom` and `Wing_B_Station`).
-  3. **Temporal Shift Duration:** Assert $\text{timestamps}[i][1] > \text{timestamps}[i][0]$ and $(\text{timestamps}[i][1] - \text{timestamps}[i][0]) \ge \text{min\_shift\_seconds}$.
-* **Demo UX (Split-Screen View):**
-  * **Left Panel (Facility Local Machine — Private):** Displays raw nurse names, badge IDs, and door tap logs with two one-click presets: `Load Valid Shift (5 Active Nurses)` and `Load Ghost-Job Fraud (Cloned Front-Desk Taps)`.
-  * **Right Panel (Regulator Auditor Portal — Public):** Displays *only* the cryptographic proof bytes, anonymous nullifier hashes, and a `VERIFIED` or `REJECTED` compliance status—demonstrating zero PII leakage.
+## Open questions I'm tracking
 
-### Track 2: Family Proxy Verification Engine (Phantom Care)
-* **Stack:** Synthetic CMS Blue Button 2.0 FHIR `ExplanationOfBenefit` JSON + Node/Python backend + Twilio SMS/Voice API.
-* **Workflow:**
-  1. Ingest a resident's recent unbundled Medicare Part B / DMEPOS claims (e.g., `$650` knee orthotic brace, `4x` outpatient physical therapy visits).
-  2. Rules engine flags high-fraud-risk HCPCS codes and dispatches an automated SMS or voice call to the registered Healthcare Proxy / Power of Attorney.
-  3. When the proxy replies `NO` (or presses `2` on a voice call), a webhook updates the dashboard status from `Pending Verification` to `Disputed by Family Proxy` and freezes claim payout simulation.
+- **NFC hardware lock (H0):** Do we have physical NTAG215 stickers in hand, or are we using two Android phones via HTTP POST / HCE fallback?
+- **Chain helper runtime:** Is Saswata exposing `commit()` as a JS helper called from the frontend on tap, or should `/live-tap` call it server-side in Python (`web3.py`) so phone POSTs only need one lightweight HTTP request?
+- **Shared 6-facility list:** Confirming exact CCNs/states with Abi and Saswata (including Abi's Montana rural facility) so PBJ pulls align across SPEND and SHIFT.
 
-### Track 3: Related-Party Cost-Report X-Ray (LLC Markup Detector)
-* **Stack:** Python (`pandas` / FastAPI) or client-side TypeScript CSV/JSON analyzer.
-* **Workflow:**
-  1. Ingest a mock facility expense CSV (`vendor_name`, `item_category`, `unit_price`, `total_billed`) alongside a corporate entity registry JSON (modeled on CMS Additional Disclosable Party / PECOS filings).
-  2. Cross-reference every line item against a **GPO Fair-Market Benchmark Table** to compute excess markup deltas above open-market rates.
-  3. Perform an entity-resolution check matching shared parent LLCs, registered agents, or business addresses between the facility and vendors, surfacing hidden profit tunneling on the dashboard.
+## My ideas / direction
 
----
+- Ship the static spine (Tasks 1–11) first so the SHIFT tab, HPRD math breakdown, collision graph, and suspended-license timeline are 100% demo-ready before relying on live phone WiFi.
+- Hash each tap payload (`facility_id`, `license_id`, `door_id`, `timestamp`) and pass it to Saswata's `commit()` helper at capture time so both the Investigator Dashboard and Facility Intake Console show live Basescan links per scan.
 
-## 4. 7-Hour Sprint Execution Plan
+## Decisions I've made
 
-| Time Block | Track 1 (ZKP Ghost Jobs) | Track 2 (Family Proxy) | Track 3 (Markup Detector) |
-| :--- | :--- | :--- | :--- |
-| **Hours 1 – 2** | Install `noirup` & `bbup`; write `main.nr` assertions; test valid and ghost-fraud `Prover.toml` files via CLI. | Create synthetic FHIR `ExplanationOfBenefit` JSON; configure Twilio trial SMS/Voice webhook. | Build sample cost-report CSV, GPO benchmark JSON, and corporate ownership graph JSON. |
-| **Hours 3 – 4** | Wrap `nargo execute` + `bb prove` + `bb verify` in FastAPI endpoint returning proof hex and verification status. | Build claim-flagging trigger and webhook listener that updates claim status on proxy reply. | Write comparison script flagging unit prices $> 15\%$ above GPO caps and shared LLC links. |
-| **Hours 5 – 6** | Build Split-Screen Facility Private Log vs. Auditor Public ZKP Verifier UI with preset scenarios. | Build Claims Feed UI showing live SMS dispatch and real-time `Disputed` badge updates. | Build Cost-Report X-Ray table and summary KPI cards showing total hidden markup dollars. |
-| **Hour 7** | Merge all three tabs into unified dashboard; freeze code 30 minutes early; rehearse 3-minute demo pitch. | Merge & pitch rehearsal. | Merge & pitch rehearsal. |
+- (Nov 22) Taking Dev B — Phantom Shift.
+- (Nov 22) Dropped Noir ZK staffing circuit; building plain-code spatial-temporal + license checks on top of Saswata's Base Sepolia tap anchoring.
 
----
+## TODO sections (for teammates to drop asks here)
 
-## 5. Post-Hackathon Scaling & Go-To-Market (GTM) Strategy
-
-Because nursing home operators resist voluntary transparency tools, commercial rollout must sequence **payer-side products first** (requiring zero facility permission) before expanding into **facility-side cryptographic compliance**.
-
-### Phase 1 (Months 1 – 3): Payer-Side Phantom Care Verification (Wedge Product)
-* **Target Customers:** Medicare Advantage Special Needs Plans (Institutional SNPs) and state Medicaid Managed Care Organizations (MCOs).
-* **Value Proposition:** Immediate hard-dollar ROI by intercepting fraudulent Part B DMEPOS, therapy, and home-health claims before reimbursement clears.
-* **GTM Motion:** Pilot with a regional Medicare Advantage plan or Home & Community-Based Services (HCBS) network using retrospective claims data to prove recovered leakage, pricing on a shared-savings or per-member-per-month (PMPM) SaaS basis.
-
-### Phase 2 (Months 4 – 9): Automated Cost-Report & Related-Party Analytics
-* **Target Customers:** State Medicaid Agencies (e.g., Arizona AHCCCS), CMS Unified Program Integrity Contractors (UPICs), and state Attorneys General Medicaid Fraud Control Units (MFCUs).
-* **Value Proposition:** Automates desk audits of annual cost reports (Form CMS-2540-24) by joining Secretary of State corporate registries, CMS PECOS ownership data, and GPO pricing benchmarks—turning weeks of manual forensic accounting into instant risk scores.
-
-### Phase 3 (Months 10 – 18): Hardware-Anchored ZKP Staffing Attestation
-* **Target Customers:** Enterprise senior-living operators seeking reputational differentiation, lower liability insurance premiums, and regulatory "Audit Safe Harbor" status, integrated via existing EHR and mobile access partners (e.g., PointClickCare, HID Mobile Access).
-* **Scaling Architecture:**
-  * Replace simulated taps with **Apple Wallet / Google Wallet NFC credentials** bound to state nursing board verifiable credentials (BBS+ signatures).
-  * Batch shift proofs using recursive ZK rollups so a 200-facility chain can publish a single daily cryptographic compliance attestation on-chain or to a state Medicaid portal in milliseconds.
-  * Partner with state Medicaid rate-setting bodies to offer streamlined audit status or quality-incentive bonuses for facilities submitting continuous ZKP staffing proofs.
+(empty — add your TODO sections at the bottom using the format in `contexts/README.md`)
